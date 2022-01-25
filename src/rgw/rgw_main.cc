@@ -58,12 +58,17 @@
 #ifdef WITH_RADOSGW_DBSTORE
 #include "rgw_sal_dbstore.h"
 #endif
+#ifdef WITH_RADOSGW_TRACER
+#include "rgw_sal_tracer.h" //insert #ifdef statement for later -Daniel P
+#endif
 
 #include "services/svc_zone.h"
 
 #ifdef HAVE_SYS_PRCTL_H
 #include <sys/prctl.h>
 #endif
+
+
 
 #define dout_subsys ceph_subsys_rgw
 
@@ -364,7 +369,7 @@ int radosgw_Main(int argc, const char **argv)
   // Get the store backend
   const auto& config_store = g_conf().get_val<std::string>("rgw_backend_store");
 #ifdef WITH_RADOSGW_DBSTORE
-  if (config_store == "dbstore") {
+  if (config_store == "dbstore") { 
     rgw_store = "dbstore";
   }
 #endif
