@@ -28,20 +28,21 @@
 #include "rgw_multi.h"
 
 //rados includes
+/*
 #include "rgw_multi.h"
 #include "rgw_putobj_processor.h"
 #include "services/svc_tier_rados.h"
 #include "cls/lock/cls_lock_client.h"
-
+*/
 //dbstore includes
+/*
 #include "rgw_lc.h"
 #include "store/dbstore/common/dbstore.h"
 #include "store/dbstore/dbstore_mgr.h"
-
+*/
 namespace rgw { namespace sal {
 
     class TStore;
-    /*notifications*/
 
   class LCTSerializer : public LCSerializer {
    LCSerializer * TSerializer;
@@ -55,11 +56,11 @@ namespace rgw { namespace sal {
   }
 };
 
-  class TLifeCycle : public Lifecycle {
+  class TLifecycle : public Lifecycle {
     TStore* store;
   
   public:
-   TLifecycle(DBstore*) : store(_st) {}
+   TLifecycle(TStore* _st) : store(_st) {}
    virtual int get_entry(const std::string& oid, const std::string& marker, LCEntry& entry) override;
    virtual int get_next_entry(const std::string& oid, std::string& marker, LCEntry& entry) override;
    virtual int set_entry(const std::string& oid, const LCEntry& entry) override;
@@ -83,6 +84,8 @@ namespace rgw { namespace sal {
    virtual int publish_reserve(const DoutPrefixProvider *dpp, RGWObjTags* obj_tags = nullptr) override { return 0;}
    virtual int publish_commit(const DoutPrefixProvider* dpp, uint64_t size,
 		       const ceph::real_time& mtime, const std::string& etag, const std::string& version) override { return 0; }
+
+  };
 
  class TUser : public User {
     private:
@@ -232,7 +235,7 @@ namespace rgw { namespace sal {
       virtual int set_tag_timeout(const DoutPrefixProvider *dpp, uint64_t timeout) override;
       virtual int purge_instance(const DoutPrefixProvider *dpp) override;
       virtual std::unique_ptr<Bucket> clone() override {
-        return std::make_unique<DBBucket>(*this);
+        return std::make_unique<TBucket>(*this);
       }
       virtual std::unique_ptr<MultipartUpload> get_multipart_upload(
 				const std::string& oid, std::optional<std::string> upload_id,
@@ -262,22 +265,6 @@ namespace rgw { namespace sal {
       rgw_zone_id cur_zone_id;
       /*If we're just feeding another zone through this one, perhaps it is unncessary to have all of these fields? Dan P */
     public:
-      TZone(TStore* _store) : store(_store) {
-        realm = new RGWRealm();
-        zonegroup = new RGWZoneGroup();
-        zone_public_config = new RGWZone();
-        zone_params = new RGWZoneParams();
-        current_period = new RGWPeriod();
-        cur_zone_id = rgw_zone_id(zone_params->get_id());
-
-        // XXX: only default and STANDARD supported for now
-        RGWZonePlacementInfo info;
-        RGWZoneStorageClasses sc;
-        sc.set_storage_class("STANDARD", nullptr, nullptr);
-        info.storage_classes = sc;
-        zone_params->placement_pools["default"] = info;
-      } //This large constructor is templated off of dbstore
-
       TZone(TStore* _store) : store(_store) {}
       ~TZone() = default;      
 
@@ -312,7 +299,7 @@ namespace rgw { namespace sal {
     TStore* store;
   
   public:
-   TOIDCProvider(TStore( _store) : store(_store) {}
+   TOIDCProvider(TStore* _store) : store(_store) {}
    ~TOIDCProvider() = default;
 
    virtual int store_url(const DoutPrefixProvider *dpp, const std::string& url, bool exclusive, optional_yield y) override { return 0; }
@@ -329,7 +316,7 @@ namespace rgw { namespace sal {
 
   class TMultipartUpload : public MultipartUpload {
     TStore* store;
-    TObject mp_obj;
+    //TObject mp_obj; Get rid of this so we can just feed actual store's mp_obj's. Dan P
     ACLOwner owner;
     ceph::real_time mtime;
     rgw_placement_rule placement;
@@ -338,9 +325,9 @@ namespace rgw { namespace sal {
    TMultipartUpload(TStore* _store, Bucket* _bucket, const std::string& oid, std::optional<std::string> upload_id, ACLOwner _owner, ceph::real_time _mtime) : MultipartUpload(_bucket), store(_store), mp_obj(oid, upload_id), owner(_owner), mtime(_mtime) {}
    virtual ~TMultipartUpload() = default;
 
-   virtual const std::string& get_meta() const { return mp_obj.get_meta(); }
-   virtual const std::string& get_key() const { return mp_obj.get_key(); }
-   virtual const std::string& get_upload_id() const { return mp_obj.get_upload_id(); }
+   virtual const std::string& get_meta() const { return store->store->mp_obj.get_meta(); } //get the store of the store's mp_obj. Dan P
+   virtual const std::string& get_key() const { return store->store->mp_obj.get_key(); }
+   virtual const std::string& get_upload_id() const { return store->store->mp_obj.get_upload_id(); }
    virtual const ACLOwner& get_owner() const override { return owner; }
    virtual ceph::real_time& get_mtime() { return mtime; }
    virtual std::unique_ptr<rgw::sal::Object> get_meta_obj() override;
@@ -385,8 +372,6 @@ class TObject : public Object {
         private:
           TObject* source;
           RGWObjectCtx* rctx;
-          T::Object op_target;
-          T::Object::Read parent_op;
 
         public:
           TReadOp(TObject *_source, RGWObjectCtx *_rctx);
@@ -401,8 +386,7 @@ class TObject : public Object {
         private:
           TObject* source;
           RGWObjectCtx* rctx;
-          T::Object op_target;
-          T::Object::Delete parent_op;
+
 
         public:
           TDeleteOp(TObject* _source, RGWObjectCtx* _rctx);
@@ -495,8 +479,7 @@ class TObject : public Object {
           Attrs* vals) override;
       virtual int omap_set_val_by_key(const DoutPrefixProvider *dpp, const std::string& key, bufferlist& val,
           bool must_exist, optional_yield y) override;
-    private:
-      int read_attrs(const DoutPrefixProvider* dpp, DB::Object::Read &read_op, optional_yield y, rgw_obj* target_obj = nullptr);
+
   };
 
     class MPTSerializer : public MPSerializer {
@@ -510,14 +493,13 @@ class TObject : public Object {
 
   class TAtomicWriter : public Writer {
     protected:
-    rgw::sal::DBStore* store;
+    rgw::sal::TStore* store;
     const rgw_user& owner;
 	const rgw_placement_rule *ptail_placement_rule;
 	uint64_t olh_epoch;
 	const std::string& unique_tag;
     TObject obj;
-    T::Object op_target;
-    T::Object::Write parent_op;
+
     uint64_t total_data_size = 0; /* for total data being uploaded */
     bufferlist head_data;
     bufferlist tail_part_data;
@@ -529,7 +511,7 @@ class TObject : public Object {
     TAtomicWriter(const DoutPrefixProvider *dpp,
 	    	    optional_yield y,
 		        std::unique_ptr<rgw::sal::Object> _head_obj,
-		        DBStore* _store,
+		        TStore* _store,
     		    const rgw_user& _owner, RGWObjectCtx& obj_ctx,
 	    	    const rgw_placement_rule *_ptail_placement_rule,
 		        uint64_t _olh_epoch,
@@ -563,10 +545,6 @@ class TObject : public Object {
     string upload_id;
     string oid; /* object->name() + "." + "upload_id" + "." + part_num */
     std::unique_ptr<rgw::sal::Object> meta_obj;
-    /*This is DB specific*/
-    DB::Object op_target;
-    DB::Object::Write parent_op;
-    /*end specific*/
     int part_num;
     string part_num_str;
     uint64_t total_data_size = 0; /* for total data being uploaded */
@@ -580,7 +558,7 @@ public:
     TMultipartWriter(const DoutPrefixProvider *dpp,
 		       optional_yield y, MultipartUpload* upload,
 		       std::unique_ptr<rgw::sal::Object> _head_obj,
-		       DBStore* _store,
+		       TStore* _store,
 		       const rgw_user& owner, RGWObjectCtx& obj_ctx,
 		       const rgw_placement_rule *ptail_placement_rule,
 		       uint64_t part_num, const std::string& part_num_str);
@@ -605,19 +583,20 @@ public:
 
   class TStore : public Store {
     private:
-      store* store; //The store that it shadows - Dan P
-      string luarocks_path;
+      Store* store; //The store that it shadows - Dan P
+      std::string luarocks_path;
       TZone zone;
 
     /*I've removed any fields that are unique to a current database - Dan P */
 
     public:
-      TStore(): tsm(nullptr), zone(this), cct(nullptr), dpp(nullptr),
-                 use_lc_thread(false) {}
+      TStore(): tsm(nullptr), zone(this), cct(nullptr),/* dpp(nullptr),
+                 use_lc_thread(false) */{} //Need to figure out how to reckon different style of Store() between DBstore and RadosStore. Dan P
       ~TStore() { delete store; } //may need changing
-      }
+    
 
       int initialize(CephContext *cct, const DoutPrefixProvider *dpp);
+      void set_store(Store* realStore) { store = realStore; } 
 
       virtual const char* get_name() const override {
         return store.get_name(); //first real change to code: should return name of store that it is shadowing - Dan P
@@ -636,7 +615,7 @@ public:
       virtual int forward_request_to_master(const DoutPrefixProvider *dpp, User* user, obj_version* objv,
           bufferlist& in_data, JSONParser *jp, req_info& info,
           optional_yield y) override;
-      virtual Zone* get_zone() { return store.get_zone(); } //give zone of shadowed store
+      virtual Zone* get_zone() { return store->get_zone(); } //give zone of shadowed store
       virtual std::string zone_unique_id(uint64_t unique_num) override;
       virtual std::string zone_unique_trans_id(const uint64_t unique_num) override;
       virtual int cluster_stat(RGWClusterStat& stats) override;
@@ -724,7 +703,7 @@ public:
       virtual void finalize(void) override;
 
       virtual CephContext *ctx(void) override {
-        return db->ctx();
+        return store->db->ctx();
       }
 
       virtual const std::string& get_luarocks_path() const override {
@@ -733,6 +712,7 @@ public:
 
       virtual void set_luarocks_path(const std::string& path) override {
         luarocks_path = path;
+        store->set_luarocks_path(path);
       }
   };
 

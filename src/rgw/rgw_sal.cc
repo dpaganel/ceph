@@ -37,10 +37,16 @@ extern rgw::sal::Store* newStore(void);
 extern rgw::sal::Store* newDBStore(CephContext *cct);
 #endif
 }
-
+/*Dan P: we can still access cct from the argument, so no need to add new arguments?
+*if(cct->tracerDrive.compare == 0) {
+*[syntax to enable both tracerdrive and boot up a store]
+* } else {
+* current syntax
+*}
+*/
 rgw::sal::Store* StoreManager::init_storage_provider(const DoutPrefixProvider* dpp, CephContext* cct, const std::string svc, bool use_gc_thread, bool use_lc_thread, bool quota_threads, bool run_sync_thread, bool run_reshard_thread, bool use_cache, bool use_gc)
 {
-  if (svc.compare("rados") == 0) {
+  if (svc.compare("rados") == 0) { //Dan P: This comes from the yaml configs - need to figure out how to implement a tracer option
     rgw::sal::Store* store = newStore();
     RGWRados* rados = static_cast<rgw::sal::RadosStore* >(store)->getRados();
 
