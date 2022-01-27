@@ -59,14 +59,14 @@
 #define dout_subsys ceph_subsys_rgw
 
 using namespace std;
-
+/*
 namespace rgw::sal {
 
 
 
 
 
-/*
+
     int TUser::list_buckets(const DoutPrefixProvider* dpp, const std::string& marker,
 			       const std::string& end_marker, uint64_t max, bool need_stats,
 			       BucketList &buckets, optional_yield y)
@@ -114,11 +114,11 @@ namespace rgw::sal {
   {
       return user.read_stats_async(dpp, cb);
   }
-*/ //I want to get bootup to run before adding any other functions. Dan P
-
+ //I want to get bootup to run before adding any other functions. Dan P
+#ifdef 0
   const RGWZoneGroup& TZone::get_zonegroup()
   {
-    return store->zone->get_zonegroup();
+    return store->get_store()->get_zone()->get_zonegroup();
   }
   
   int TStore::register_to_service_map(const DoutPrefixProvider *dpp, const string& daemon_type,
@@ -140,16 +140,17 @@ namespace rgw::sal {
     #ifdef WITH_RADOSGW_DBSTORE
         if(config_store == "dbstore") {
 
-            /*set up a dbstore and assign it to the Tstore*/
+            //set up a dbstore and assign it to the Tstore
         }
     #endif
         if(config_store == "rados") {
 
-            /*set up a radosStore and assign it to the Tstore*/
+            //set up a radosStore and assign it to the Tstore
         }
         }
 
         return store;
     }
+#endif
 
- }
+ }*/

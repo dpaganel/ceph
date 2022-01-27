@@ -40,164 +40,201 @@
 #include "store/dbstore/common/dbstore.h"
 #include "store/dbstore/dbstore_mgr.h"
 */
+
+//TODO: There's several classes that use DB::Object 
+
 namespace rgw { namespace sal {
 
-    class TStore;
+  class Tracer;
 
   class LCTSerializer : public LCSerializer {
-   LCSerializer * TSerializer;
+  const std::string oid;
 
   public:
-   LCTSerializer(TStore * store, const std::string& oid, const std::string& lock_name, const std::string& cookie) {}
- 
-   virtual int try_lock(const DoutPrefixProvider *dpp, utime_t dur, optional_yield y) override { return 0; }
-   virtual int unlock() override {
-    return 0;
-  }
-};
+    LCTSerializer(Tracer* trace, const std::string& oid, const std::string& lock_name, const std::string& cookie) {}
 
-  class TLifecycle : public Lifecycle {
-    TStore* store;
-  
+    virtual int try_lock(const DoutPrefixProvider *dpp, utime_t dur, optional_yield y) override { return 0; }
+    virtual int unlock() override {
+      return 0;
+    }
+  };
+
+  class TracerLifecycle : public Lifecycle {
+  Tracer* trace;
+
   public:
-   TLifecycle(TStore* _st) : store(_st) {}
-   virtual int get_entry(const std::string& oid, const std::string& marker, LCEntry& entry) override;
-   virtual int get_next_entry(const std::string& oid, std::string& marker, LCEntry& entry) override;
-   virtual int set_entry(const std::string& oid, const LCEntry& entry) override;
-   virtual int list_entries(const std::string& oid, const std::string& marker,
-			   uint32_t max_entries, std::vector<LCEntry>& entries) override;
-   virtual int rm_entry(const std::string& oid, const LCEntry& entry) override;
-   virtual int get_head(const std::string& oid, LCHead& head) override;
-   virtual int put_head(const std::string& oid, const LCHead& head) override;
-   virtual LCSerializer* get_serializer(const std::string& lock_name, const std::string& oid, const std::string& cookie) override;
+    TracerLifecycle(Tracer* _st) : trace(_st) {}
+
+    virtual int get_entry(const std::string& oid, const std::string& marker, LCEntry& entry) override;
+    virtual int get_next_entry(const std::string& oid, std::string& marker, LCEntry& entry) override;
+    virtual int set_entry(const std::string& oid, const LCEntry& entry) override;
+    virtual int list_entries(const std::string& oid, const std::string& marker,
+	  		   uint32_t max_entries, std::vector<LCEntry>& entries) override;
+    virtual int rm_entry(const std::string& oid, const LCEntry& entry) override;
+    virtual int get_head(const std::string& oid, LCHead& head) override;
+    virtual int put_head(const std::string& oid, const LCHead& head) override;
+    virtual LCSerializer* get_serializer(const std::string& lock_name, const std::string& oid, const std::string& cookie) override;
+    };
+    
+  class TZone : public Zone {
+    protected:
+      Tracer* trace;
+      RGWRealm *realm{nullptr};
+      RGWZoneGroup *zonegroup{nullptr};
+      RGWZone *zone_public_config{nullptr}; /* external zone params, e.g., entrypoints, log flags, etc. */  
+      RGWZoneParams *zone_params{nullptr}; /* internal zone params, e.g., rados pools */
+      RGWPeriod *current_period{nullptr};
+      rgw_zone_id cur_zone_id;
+
+    public:
+      TZone(Tracer* _tracer) : trace(_tracer) {
+        realm = new RGWRealm();
+        zonegroup = new RGWZoneGroup();
+        zone_public_config = new RGWZone();
+        zone_params = new RGWZoneParams();
+        current_period = new RGWPeriod();
+        cur_zone_id = rgw_zone_id(zone_params->get_id());
+
+        // XXX: only default and STANDARD supported for now
+        RGWZonePlacementInfo info;
+        RGWZoneStorageClasses sc;
+        sc.set_storage_class("STANDARD", nullptr, nullptr);
+        info.storage_classes = sc;
+        zone_params->placement_pools["default"] = info;
+      }
+      ~TZone() = default;
+
+      virtual const RGWZoneGroup& get_zonegroup() override;
+      virtual int get_zonegroup(const std::string& id, RGWZoneGroup& zonegroup) override;
+      virtual const RGWZoneParams& get_params() override;
+      virtual const rgw_zone_id& get_id() override;
+      virtual const RGWRealm& get_realm() override;
+      virtual const std::string& get_name() const override;
+      virtual bool is_writeable() override;
+      virtual bool get_redirect_endpoint(std::string* endpoint) override;
+      virtual bool has_zonegroup_api(const std::string& api) const override;
+      virtual const std::string& get_current_period_id() override;
   };
 
   class TNotification : public Notification {
-    TStore* store;
+  protected:
+  public:
+    TNotification(Object* _obj, Object* _src_obj, rgw::notify::EventType _type)
+    : Notification(_obj, _src_obj, _type) {}
+    ~TNotification() = default;
 
-  public: //The rados constructor calls for a store of its own type, will need to check that this works - Dan P
-   TNotification(Object* _obj, Object* _src_obj, rgw::notify::EventType _type)
-    : Notification(_obj, _src_obj, _type) {} //This is templated off of dbstore
+    virtual int publish_reserve(const DoutPrefixProvider *dpp, RGWObjTags* obj_tags = nullptr) override { return 0;}
+    virtual int publish_commit(const DoutPrefixProvider* dpp, uint64_t size,
+			       const ceph::real_time& mtime, const std::string& etag, const std::string& version) override { return 0; }
+};
 
-   ~TNotification() = default;
-
-   virtual int publish_reserve(const DoutPrefixProvider *dpp, RGWObjTags* obj_tags = nullptr) override { return 0;}
-   virtual int publish_commit(const DoutPrefixProvider* dpp, uint64_t size,
-		       const ceph::real_time& mtime, const std::string& etag, const std::string& version) override { return 0; }
-
-  };
-
- class TUser : public User {
+class TracerUser : public User {
     private:
-        Store* store;
-        User* user;
-      
-      
-
-    public: /*unless otherwise stated all functions are uninitalized*/
-        TUser(TStore *_st, const rgw_user& _u) : User(_u), store(_st) { }
-        TUser(TStore *_st, const RGWUserInfo& _i) : User(_i), store(_st) { }
-        TUser(TStore *_st) : store(_st) { }
-        TUser(TUser& _o) = default;
-        TUser() {}
-
-    virtual std::unique_ptr<User> clone() override {
-        return std::unique_ptr<User>(new TUser(*this));
-    }
-
-    int list_buckets(const DoutPrefixProvider* dpp, const std::string& marker, const std::string& end_marker,
-		     uint64_t max, bool need_stats, BucketList& buckets,
-		     optional_yield y) override;
-    virtual int create_bucket(const DoutPrefixProvider* dpp,
-                            const rgw_bucket& b,
-                            const std::string& zonegroup_id,
-                            rgw_placement_rule& placement_rule,
-                            std::string& swift_ver_location,
-                            const RGWQuotaInfo * pquota_info,
-                            const RGWAccessControlPolicy& policy,
-			    Attrs& attrs,
-                            RGWBucketInfo& info,
-                            obj_version& ep_objv,
-			    bool exclusive,
-			    bool obj_lock_enabled,
-			    bool* existed,
-			    req_info& req_info,
-			    std::unique_ptr<Bucket>* bucket,
-			    optional_yield y) override;
-    virtual int read_attrs(const DoutPrefixProvider* dpp, optional_yield y) override;
-    virtual int merge_and_store_attrs(const DoutPrefixProvider* dpp, Attrs& new_attrs, optional_yield y) override;
-    virtual int read_stats(const DoutPrefixProvider *dpp,
-                           optional_yield y, RGWStorageStats* stats,
-			   ceph::real_time* last_stats_sync = nullptr,
-			   ceph::real_time* last_stats_update = nullptr) override;
-    virtual int read_stats_async(const DoutPrefixProvider *dpp, RGWGetUserStats_CB* cb) override;
-    virtual int complete_flush_stats(const DoutPrefixProvider *dpp, optional_yield y) override;
-    virtual int read_usage(const DoutPrefixProvider *dpp, uint64_t start_epoch, uint64_t end_epoch, uint32_t max_entries,
-			   bool* is_truncated, RGWUsageIter& usage_iter,
-			   std::map<rgw_user_bucket, rgw_usage_log_entry>& usage) override;
-    virtual int trim_usage(const DoutPrefixProvider *dpp, uint64_t start_epoch, uint64_t end_epoch) override;
-
-    virtual int load_user(const DoutPrefixProvider* dpp, optional_yield y) override;
-    virtual int store_user(const DoutPrefixProvider* dpp, optional_yield y, bool exclusive, RGWUserInfo* old_info = nullptr) override;
-    virtual int remove_user(const DoutPrefixProvider* dpp, optional_yield y) override;
-
-    friend class TBucket; 
- };     
-
- class TBucket : public Bucket {
-    private:
-      TStore *store;
-      RGWAccessControlPolicy acls; //is this neccessary - Dan P
+      Tracer *trace;
 
     public:
-      TBucket(TStore *_st)
-        : store(_st),
+      TracerUser(Tracer *_st, const rgw_user& _u) : User(_u), trace(_st) { }
+      TracerUser(Tracer *_st, const RGWUserInfo& _i) : User(_i), trace(_st) { }
+      TracerUser(Tracer *_st) : trace(_st) { }
+      TracerUser(TracerUser& _o) = default;
+      TracerUser() {}
+
+      virtual std::unique_ptr<User> clone() override {
+        return std::unique_ptr<User>(new TracerUser(*this));
+      }
+      int list_buckets(const DoutPrefixProvider *dpp, const std::string& marker, const std::string& end_marker,
+          uint64_t max, bool need_stats, BucketList& buckets, optional_yield y) override;
+      virtual int create_bucket(const DoutPrefixProvider* dpp,
+          const rgw_bucket& b,
+          const std::string& zonegroup_id,
+          rgw_placement_rule& placement_rule,
+          std::string& swift_ver_location,
+          const RGWQuotaInfo* pquota_info,
+          const RGWAccessControlPolicy& policy,
+          Attrs& attrs,
+          RGWBucketInfo& info,
+          obj_version& ep_objv,
+          bool exclusive,
+          bool obj_lock_enabled,
+          bool* existed,
+          req_info& req_info,
+          std::unique_ptr<Bucket>* bucket,
+          optional_yield y) override;
+      virtual int read_attrs(const DoutPrefixProvider* dpp, optional_yield y) override;
+      virtual int read_stats(const DoutPrefixProvider *dpp,
+          optional_yield y, RGWStorageStats* stats,
+          ceph::real_time *last_stats_sync = nullptr,
+          ceph::real_time *last_stats_update = nullptr) override;
+      virtual int read_stats_async(const DoutPrefixProvider *dpp, RGWGetUserStats_CB* cb) override;
+      virtual int complete_flush_stats(const DoutPrefixProvider *dpp, optional_yield y) override;
+      virtual int read_usage(const DoutPrefixProvider *dpp, uint64_t start_epoch, uint64_t end_epoch, uint32_t max_entries,
+          bool* is_truncated, RGWUsageIter& usage_iter,
+          map<rgw_user_bucket, rgw_usage_log_entry>& usage) override;
+      virtual int trim_usage(const DoutPrefixProvider *dpp, uint64_t start_epoch, uint64_t end_epoch) override;
+
+      /* Placeholders */
+      virtual int merge_and_store_attrs(const DoutPrefixProvider* dpp, Attrs& new_attrs, optional_yield y) override;
+      virtual int load_user(const DoutPrefixProvider* dpp, optional_yield y) override;
+      virtual int store_user(const DoutPrefixProvider* dpp, optional_yield y, bool exclusive, RGWUserInfo* old_info = nullptr) override;
+      virtual int remove_user(const DoutPrefixProvider* dpp, optional_yield y) override;
+
+      friend class TracerBucket;
+  };
+
+  class TracerBucket : public Bucket {
+    private:
+      Tracer *trace;
+      RGWAccessControlPolicy acls;
+
+    public:
+      TracerBucket(Tracer *_st)
+        : trace(_st),
         acls() {
         }
 
-      TBucket(TStore *_st, User* _u)
+      TracerBucket(Tracer *_st, User* _u)
         : Bucket(_u),
-        store(_st),
+        trace(_st),
         acls() {
         }
 
-      TBucket(TStore *_st, const rgw_bucket& _b)
+      TracerBucket(Tracer *_st, const rgw_bucket& _b)
         : Bucket(_b),
-        store(_st),
+        trace(_st),
         acls() {
         }
 
-      TBucket(TStore *_st, const RGWBucketEnt& _e)
+      TracerBucket(Tracer *_st, const RGWBucketEnt& _e)
         : Bucket(_e),
-        store(_st),
+        trace(_st),
         acls() {
         }
 
-      TBucket(TStore *_st, const RGWBucketInfo& _i)
+      TracerBucket(Tracer *_st, const RGWBucketInfo& _i)
         : Bucket(_i),
-        store(_st),
+        trace(_st),
         acls() {
         }
 
-      TBucket(TStore *_st, const rgw_bucket& _b, User* _u)
+      TracerBucket(Tracer *_st, const rgw_bucket& _b, User* _u)
         : Bucket(_b, _u),
-        store(_st),
+        trace(_st),
         acls() {
         }
 
-      TBucket(TStore *_st, const RGWBucketEnt& _e, User* _u)
+      TracerBucket(Tracer *_st, const RGWBucketEnt& _e, User* _u)
         : Bucket(_e, _u),
-        store(_st),
+        trace(_st),
         acls() {
         }
 
-      TBucket(TStore *_st, const RGWBucketInfo& _i, User* _u)
+      TracerBucket(Tracer *_st, const RGWBucketInfo& _i, User* _u)
         : Bucket(_i, _u),
-        store(_st),
+        trace(_st),
         acls() {
         }
 
-      ~TBucket() { }
+      ~TracerBucket() { }
 
       virtual std::unique_ptr<Object> get_object(const rgw_obj_key& k) override;
       virtual int list(const DoutPrefixProvider *dpp, ListParams&, int, ListResults&, optional_yield y) override;
@@ -235,7 +272,7 @@ namespace rgw { namespace sal {
       virtual int set_tag_timeout(const DoutPrefixProvider *dpp, uint64_t timeout) override;
       virtual int purge_instance(const DoutPrefixProvider *dpp) override;
       virtual std::unique_ptr<Bucket> clone() override {
-        return std::make_unique<TBucket>(*this);
+        return std::make_unique<TracerBucket>(*this);
       }
       virtual std::unique_ptr<MultipartUpload> get_multipart_upload(
 				const std::string& oid, std::optional<std::string> upload_id,
@@ -251,116 +288,182 @@ namespace rgw { namespace sal {
       virtual int abort_multiparts(const DoutPrefixProvider* dpp,
 				   CephContext* cct) override;
 
-      friend class TStore;
-  };
-
- class TZone : public Zone {
-    protected:
-      TStore* store;
-      RGWRealm *realm{nullptr};
-      RGWZoneGroup *zonegroup{nullptr};
-      RGWZone *zone_public_config{nullptr}; /* external zone params, e.g., entrypoints, log flags, etc. */  
-      RGWZoneParams *zone_params{nullptr}; /* internal zone params, e.g., rados pools */
-      RGWPeriod *current_period{nullptr};
-      rgw_zone_id cur_zone_id;
-      /*If we're just feeding another zone through this one, perhaps it is unncessary to have all of these fields? Dan P */
-    public:
-      TZone(TStore* _store) : store(_store) {}
-      ~TZone() = default;      
-
-      virtual const RGWZoneGroup& get_zonegroup() override;
-      virtual int get_zonegroup(const std::string& id, RGWZoneGroup& zonegroup) override;
-      virtual const RGWZoneParams& get_params() override;
-      virtual const rgw_zone_id& get_id() override;
-      virtual const RGWRealm& get_realm() override;
-      virtual const std::string& get_name() const override;
-      virtual bool is_writeable() override;
-      virtual bool get_redirect_endpoint(std::string* endpoint) override;
-      virtual bool has_zonegroup_api(const std::string& api) const override;
-      virtual const std::string& get_current_period_id() override;
+      friend class Tracer;
   };
 
   class TLuaScriptManager : public LuaScriptManager {
-    TStore* store;
-    rgw_pool pool;
+    Tracer* trace;
 
-  public:
-   TLuaScriptManager(TStore* _s) : store(_s)
-   {
-   }
-   virtual ~TLuaScriptManager() = default;
+    public:
+    TLuaScriptManager(Tracer* _s) : trace(_s)
+    {
+    }
+    virtual ~TLuaScriptManager() = default;
 
-   virtual int get(const DoutPrefixProvider* dpp, optional_yield y, const std::string& key, std::string& script) override { return -ENOENT; }
-   virtual int put(const DoutPrefixProvider* dpp, optional_yield y, const std::string& key, const std::string& script) override { return -ENOENT; }
-   virtual int del(const DoutPrefixProvider* dpp, optional_yield y, const std::string& key) override { return -ENOENT; }
+    virtual int get(const DoutPrefixProvider* dpp, optional_yield y, const std::string& key, std::string& script) override { return -ENOENT; }
+    virtual int put(const DoutPrefixProvider* dpp, optional_yield y, const std::string& key, const std::string& script) override { return -ENOENT; }
+    virtual int del(const DoutPrefixProvider* dpp, optional_yield y, const std::string& key) override { return -ENOENT; }
   };
-   
+
   class TOIDCProvider : public RGWOIDCProvider {
-    TStore* store;
-  
-  public:
-   TOIDCProvider(TStore* _store) : store(_store) {}
-   ~TOIDCProvider() = default;
+    Tracer* trace;
+    public:
+    TOIDCProvider(Tracer* _store) : trace(_store) {}
+    ~TOIDCProvider() = default;
 
-   virtual int store_url(const DoutPrefixProvider *dpp, const std::string& url, bool exclusive, optional_yield y) override { return 0; }
-   virtual int read_url(const DoutPrefixProvider *dpp, const std::string& url, const std::string& tenant) override { return 0; }
-   virtual int delete_obj(const DoutPrefixProvider *dpp, optional_yield y) override { return 0;}
-  
-   void encode(bufferlist& bl) const {
-    RGWOIDCProvider::encode(bl);
-   }
-   void decode(bufferlist::const_iterator& bl) {
-     RGWOIDCProvider::decode(bl);
-   }
+    virtual int store_url(const DoutPrefixProvider *dpp, const std::string& url, bool exclusive, optional_yield y) override { return 0; }
+    virtual int read_url(const DoutPrefixProvider *dpp, const std::string& url, const std::string& tenant) override { return 0; }
+    virtual int delete_obj(const DoutPrefixProvider *dpp, optional_yield y) override { return 0;}
+
   };
 
-  class TMultipartUpload : public MultipartUpload {
-    TStore* store;
-    //TObject mp_obj; Get rid of this so we can just feed actual store's mp_obj's. Dan P
+  /*
+   * For multipart upload, below is the process flow -
+   *
+   * MultipartUpload::Init - create head object of meta obj (src_obj_name + "." + upload_id)
+   *                     [ Meta object stores all the parts upload info]
+   * MultipartWriter::process - create all data/tail objects with obj_name same as
+   *                        meta obj (so that they can all be identified & deleted 
+   *                        during abort)
+   * MultipartUpload::Abort - Just delete meta obj .. that will indirectly delete all the
+   *                     uploads associated with that upload id / meta obj so far.
+   * MultipartUpload::Complete - create head object of the original object (if not exists) &
+   *                     rename all data/tail objects to orig object name and update
+   *                     metadata of the orig object.
+   */
+  class TMultipartPart : public MultipartPart {
+  protected:
+    RGWUploadPartInfo info; /* XXX: info contains manifest also which is not needed */
+
+  public:
+    TMultipartPart() = default;
+    virtual ~TMultipartPart() = default;
+
+    virtual RGWUploadPartInfo& get_info() { return info; }
+    virtual void set_info(const RGWUploadPartInfo& _info) { info = _info; }
+    virtual uint32_t get_num() { return info.num; }
+    virtual uint64_t get_size() { return info.accounted_size; }
+    virtual const std::string& get_etag() { return info.etag; }
+    virtual ceph::real_time& get_mtime() { return info.modified; }
+
+  };
+
+  class TracerMPObj {
+    std::string oid; // object name
+    std::string upload_id;
+    std::string meta; // multipart meta object = <oid>.<upload_id>
+  public:
+    TracerMPObj() {}
+    TracerMPObj(const std::string& _oid, const std::string& _upload_id) {
+      init(_oid, _upload_id, _upload_id);
+    }
+    TracerMPObj(const std::string& _oid, std::optional<std::string> _upload_id) {
+      if (_upload_id) {
+        init(_oid, *_upload_id, *_upload_id);
+      } else {
+        from_meta(_oid);
+      }
+    }
+    void init(const std::string& _oid, const std::string& _upload_id) {
+      init(_oid, _upload_id, _upload_id);
+    }
+    void init(const std::string& _oid, const std::string& _upload_id, const std::string& part_unique_str) {
+      if (_oid.empty()) {
+        clear();
+        return;
+      }
+      oid = _oid;
+      upload_id = _upload_id;
+      meta = oid + "." + upload_id;
+    }
+    const std::string& get_upload_id() const {
+      return upload_id;
+    }
+    const std::string& get_key() const {
+      return oid;
+    }
+    const std::string& get_meta() const { return meta; }
+    bool from_meta(const std::string& meta) {
+      int end_pos = meta.length();
+      int mid_pos = meta.rfind('.', end_pos - 1); // <key>.<upload_id>
+      if (mid_pos < 0)
+        return false;
+      oid = meta.substr(0, mid_pos);
+      upload_id = meta.substr(mid_pos + 1, end_pos - mid_pos - 1);
+      init(oid, upload_id, upload_id);
+      return true;
+    }
+    void clear() {
+      oid = "";
+      meta = "";
+      upload_id = "";
+    }
+  };
+
+  class TracerMultipartUpload : public MultipartUpload {
+    Tracer* trace;
+    TracerMPObj mp_obj;
     ACLOwner owner;
     ceph::real_time mtime;
     rgw_placement_rule placement;
-  
-  public:
-   TMultipartUpload(TStore* _store, Bucket* _bucket, const std::string& oid, std::optional<std::string> upload_id, ACLOwner _owner, ceph::real_time _mtime) : MultipartUpload(_bucket), store(_store), mp_obj(oid, upload_id), owner(_owner), mtime(_mtime) {}
-   virtual ~TMultipartUpload() = default;
 
-   virtual const std::string& get_meta() const { return store->store->mp_obj.get_meta(); } //get the store of the store's mp_obj. Dan P
-   virtual const std::string& get_key() const { return store->store->mp_obj.get_key(); }
-   virtual const std::string& get_upload_id() const { return store->store->mp_obj.get_upload_id(); }
-   virtual const ACLOwner& get_owner() const override { return owner; }
-   virtual ceph::real_time& get_mtime() { return mtime; }
-   virtual std::unique_ptr<rgw::sal::Object> get_meta_obj() override;
-   virtual int init(const DoutPrefixProvider* dpp, optional_yield y, RGWObjectCtx* obj_ctx, ACLOwner& owner, rgw_placement_rule& dest_placement, rgw::sal::Attrs& attrs) override;
-   virtual int list_parts(const DoutPrefixProvider* dpp, CephContext* cct,
-		 int num_parts, int marker,
-		 int* next_marker, bool* truncated,
-		 bool assume_unsorted = false) override;
-   virtual int abort(const DoutPrefixProvider* dpp, CephContext* cct,
-	    RGWObjectCtx* obj_ctx) override;
-   virtual int complete(const DoutPrefixProvider* dpp,
-	       optional_yield y, CephContext* cct,
-	       std::map<int, std::string>& part_etags,
-	       std::list<rgw_obj_index_key>& remove_objs,
-	       uint64_t& accounted_size, bool& compressed,
-	       RGWCompressionInfo& cs_info, off_t& ofs,
-	       std::string& tag, ACLOwner& owner,
-	       uint64_t olh_epoch,
-	       rgw::sal::Object* target_obj,
-	       RGWObjectCtx* obj_ctx) override;
-   virtual int get_info(const DoutPrefixProvider *dpp, optional_yield y, RGWObjectCtx* obj_ctx, rgw_placement_rule** rule, rgw::sal::Attrs* attrs = nullptr) override;
-   virtual std::unique_ptr<Writer> get_writer(const DoutPrefixProvider *dpp,
-		  optional_yield y,
-		  std::unique_ptr<rgw::sal::Object> _head_obj,
-		  const rgw_user& owner, RGWObjectCtx& obj_ctx,
-		  const rgw_placement_rule *ptail_placement_rule,
-		  uint64_t part_num,
-		  const std::string& part_num_str) override;
+  public:
+    TracerMultipartUpload(Tracer* _store, Bucket* _bucket, const std::string& oid, std::optional<std::string> upload_id, ACLOwner _owner, ceph::real_time _mtime) : MultipartUpload(_bucket), trace(_store), mp_obj(oid, upload_id), owner(_owner), mtime(_mtime) {}
+    virtual ~TracerMultipartUpload() = default;
+
+    virtual const std::string& get_meta() const { return mp_obj.get_meta(); }
+    virtual const std::string& get_key() const { return mp_obj.get_key(); }
+    virtual const std::string& get_upload_id() const { return mp_obj.get_upload_id(); }
+    virtual const ACLOwner& get_owner() const override { return owner; }
+    virtual ceph::real_time& get_mtime() { return mtime; }
+    virtual std::unique_ptr<rgw::sal::Object> get_meta_obj() override;
+    virtual int init(const DoutPrefixProvider* dpp, optional_yield y, RGWObjectCtx* obj_ctx, ACLOwner& owner, rgw_placement_rule& dest_placement, rgw::sal::Attrs& attrs) override;
+    virtual int list_parts(const DoutPrefixProvider* dpp, CephContext* cct,
+			 int num_parts, int marker,
+			 int* next_marker, bool* truncated,
+			 bool assume_unsorted = false) override;
+    virtual int abort(const DoutPrefixProvider* dpp, CephContext* cct,
+		    RGWObjectCtx* obj_ctx) override;
+    virtual int complete(const DoutPrefixProvider* dpp,
+		       optional_yield y, CephContext* cct,
+		       std::map<int, std::string>& part_etags,
+		       std::list<rgw_obj_index_key>& remove_objs,
+		       uint64_t& accounted_size, bool& compressed,
+		       RGWCompressionInfo& cs_info, off_t& ofs,
+		       std::string& tag, ACLOwner& owner,
+		       uint64_t olh_epoch,
+		       rgw::sal::Object* target_obj,
+		       RGWObjectCtx* obj_ctx) override;
+    virtual int get_info(const DoutPrefixProvider *dpp, optional_yield y, RGWObjectCtx* obj_ctx, rgw_placement_rule** rule, rgw::sal::Attrs* attrs = nullptr) override;
+    virtual std::unique_ptr<Writer> get_writer(const DoutPrefixProvider *dpp,
+			  optional_yield y,
+			  std::unique_ptr<rgw::sal::Object> _head_obj,
+			  const rgw_user& owner, RGWObjectCtx& obj_ctx,
+			  const rgw_placement_rule *ptail_placement_rule,
+			  uint64_t part_num,
+			  const std::string& part_num_str) override;
   };
-  
-class TObject : public Object {
+
+  class TracerMultipartPart : public MultipartPart {
+  protected:
+    RGWUploadPartInfo info; /* XXX: info contains manifest also which is not needed */
+
+  public:
+    TracerMultipartPart() = default;
+    virtual ~TracerMultipartPart() = default;
+
+    virtual RGWUploadPartInfo& get_info() { return info; }
+    virtual void set_info(const RGWUploadPartInfo& _info) { info = _info; }
+    virtual uint32_t get_num() { return info.num; }
+    virtual uint64_t get_size() { return info.accounted_size; }
+    virtual const std::string& get_etag() { return info.etag; }
+    virtual ceph::real_time& get_mtime() { return info.modified; }
+
+  };
+
+    class TObject : public Object {
     private:
-      TStore* store;
+      Tracer* trace;
       RGWAccessControlPolicy acls;
       /* XXX: to be removed. Till Dan's patch comes, a placeholder
        * for RGWObjState
@@ -372,6 +475,8 @@ class TObject : public Object {
         private:
           TObject* source;
           RGWObjectCtx* rctx;
+          DB::Object op_target;
+          DB::Object::Read parent_op; //leaving the DB:: here because it won't compile otherwise
 
         public:
           TReadOp(TObject *_source, RGWObjectCtx *_rctx);
@@ -386,7 +491,8 @@ class TObject : public Object {
         private:
           TObject* source;
           RGWObjectCtx* rctx;
-
+          DB::Object op_target;
+          DB::Object::Delete parent_op;
 
         public:
           TDeleteOp(TObject* _source, RGWObjectCtx* _rctx);
@@ -396,14 +502,14 @@ class TObject : public Object {
 
       TObject() = default;
 
-      TObject(TStore *_st, const rgw_obj_key& _k)
+      TObject(Tracer *_st, const rgw_obj_key& _k)
         : Object(_k),
-        store(_st),
+        trace(_st),
         acls() {}
 
-      TObject(TStore *_st, const rgw_obj_key& _k, Bucket* _b)
+      TObject(Tracer *_st, const rgw_obj_key& _k, Bucket* _b)
         : Object(_k, _b),
-        store(_st),
+        trace(_st),
         acls() {}
 
       TObject(TObject& _o) = default;
@@ -479,27 +585,27 @@ class TObject : public Object {
           Attrs* vals) override;
       virtual int omap_set_val_by_key(const DoutPrefixProvider *dpp, const std::string& key, bufferlist& val,
           bool must_exist, optional_yield y) override;
-
   };
 
-    class MPTSerializer : public MPSerializer {
+  class MPTSerializer : public MPSerializer {
 
   public:
-    MPTSerializer(const DoutPrefixProvider *dpp, TStore* store, TObject* obj, const std::string& lock_name) {}
+    MPTSerializer(const DoutPrefixProvider *dpp, Tracer* store, TObject* obj, const std::string& lock_name) {}
 
     virtual int try_lock(const DoutPrefixProvider *dpp, utime_t dur, optional_yield y) override {return 0; }
     virtual int unlock() override { return 0;}
   };
 
-  class TAtomicWriter : public Writer {
-    protected:
-    rgw::sal::TStore* store;
+  class TracerAtomicWriter : public Writer {
+  protected:
+    rgw::sal::Tracer* trace;
     const rgw_user& owner;
-	const rgw_placement_rule *ptail_placement_rule;
-	uint64_t olh_epoch;
-	const std::string& unique_tag;
+	  const rgw_placement_rule *ptail_placement_rule;
+	  uint64_t olh_epoch;
+  	const std::string& unique_tag;
     TObject obj;
-
+    DB::Object op_target; //leaving these as is for compilation
+    DB::Object::Write parent_op;
     uint64_t total_data_size = 0; /* for total data being uploaded */
     bufferlist head_data;
     bufferlist tail_part_data;
@@ -508,15 +614,15 @@ class TObject : public Object {
                                   written to dbstore */
 
     public:
-    TAtomicWriter(const DoutPrefixProvider *dpp,
+    TracerAtomicWriter(const DoutPrefixProvider *dpp,
 	    	    optional_yield y,
 		        std::unique_ptr<rgw::sal::Object> _head_obj,
-		        TStore* _store,
+		        DBStore* _store,
     		    const rgw_user& _owner, RGWObjectCtx& obj_ctx,
 	    	    const rgw_placement_rule *_ptail_placement_rule,
 		        uint64_t _olh_epoch,
 		        const std::string& _unique_tag);
-    ~TAtomicWriter() = default;
+    ~TracerAtomicWriter() = default;
 
     // prepare to start processing object data
     virtual int prepare(optional_yield y) override;
@@ -535,9 +641,9 @@ class TObject : public Object {
                          optional_yield y) override;
   };
 
-  class TMultipartWriter : public Writer {
+  class TracerMultipartWriter : public Writer {
   protected:
-    rgw::sal::TStore* store;
+    rgw::sal::Tracer* trace;
     const rgw_user& owner;
 	const rgw_placement_rule *ptail_placement_rule;
 	uint64_t olh_epoch;
@@ -545,6 +651,8 @@ class TObject : public Object {
     string upload_id;
     string oid; /* object->name() + "." + "upload_id" + "." + part_num */
     std::unique_ptr<rgw::sal::Object> meta_obj;
+    DB::Object op_target;
+    DB::Object::Write parent_op;
     int part_num;
     string part_num_str;
     uint64_t total_data_size = 0; /* for total data being uploaded */
@@ -555,14 +663,14 @@ class TObject : public Object {
                                   written to dbstore */
 
 public:
-    TMultipartWriter(const DoutPrefixProvider *dpp,
+    TracerMultipartWriter(const DoutPrefixProvider *dpp,
 		       optional_yield y, MultipartUpload* upload,
 		       std::unique_ptr<rgw::sal::Object> _head_obj,
-		       TStore* _store,
+		       DBStore* _store,
 		       const rgw_user& owner, RGWObjectCtx& obj_ctx,
 		       const rgw_placement_rule *ptail_placement_rule,
 		       uint64_t part_num, const std::string& part_num_str);
-    ~TMultipartWriter() = default;
+    ~TracerMultipartWriter() = default;
 
     // prepare to start processing object data
     virtual int prepare(optional_yield y) override;
@@ -581,26 +689,21 @@ public:
                        optional_yield y) override;
   };
 
-  class TStore : public Store {
-    private:
-      Store* store; //The store that it shadows - Dan P
-      std::string luarocks_path;
-      TZone zone;
 
-    /*I've removed any fields that are unique to a current database - Dan P */
 
-    public:
-      TStore(): tsm(nullptr), zone(this), cct(nullptr),/* dpp(nullptr),
-                 use_lc_thread(false) */{} //Need to figure out how to reckon different style of Store() between DBstore and RadosStore. Dan P
-      ~TStore() { delete store; } //may need changing
-    
 
-      int initialize(CephContext *cct, const DoutPrefixProvider *dpp);
-      void set_store(Store* realStore) { store = realStore; } 
 
-      virtual const char* get_name() const override {
-        return store.get_name(); //first real change to code: should return name of store that it is shadowing - Dan P
-      }
+  class Tracer : public Store {
+  private:
+    Store* realStore;
+    TZone* zone;
+  public:
+    Tracer() : realStore(nullptr) {}
+    ~Tracer() { delete realStore; }
+
+  virtual const char* get_name() const override {
+        return realStore->get_name();
+  }
 
       virtual std::unique_ptr<User> get_user(const rgw_user& u) override;
       virtual int get_user_by_access_key(const DoutPrefixProvider *dpp, const std::string& key, optional_yield y, std::unique_ptr<User>* user) override;
@@ -615,7 +718,7 @@ public:
       virtual int forward_request_to_master(const DoutPrefixProvider *dpp, User* user, obj_version* objv,
           bufferlist& in_data, JSONParser *jp, req_info& info,
           optional_yield y) override;
-      virtual Zone* get_zone() { return store->get_zone(); } //give zone of shadowed store
+      virtual Zone* get_zone() { return realStore->get_zone(); }
       virtual std::string zone_unique_id(uint64_t unique_num) override;
       virtual std::string zone_unique_trans_id(const uint64_t unique_num) override;
       virtual int cluster_stat(RGWClusterStat& stats) override;
@@ -664,8 +767,8 @@ public:
       virtual std::string meta_get_marker(void *handle) override;
       virtual int meta_remove(const DoutPrefixProvider *dpp, string& metadata_key, optional_yield y) override;
 
-      virtual const RGWSyncModuleInstanceRef& get_sync_module() { return sync_module; }
-      virtual std::string get_host_id() { return ""; }
+      virtual const RGWSyncModuleInstanceRef& get_sync_module() { return realStore->get_sync_module(); }
+      virtual std::string get_host_id() { return realStore->get_host_id(); }
 
       virtual std::unique_ptr<LuaScriptManager> get_lua_script_manager() override;
       virtual std::unique_ptr<RGWRole> get_role(std::string name,
@@ -703,19 +806,16 @@ public:
       virtual void finalize(void) override;
 
       virtual CephContext *ctx(void) override {
-        return store->db->ctx();
+        return realStore->ctx();
       }
 
       virtual const std::string& get_luarocks_path() const override {
-        return luarocks_path;
+        return realStore->get_luarocks_path();
       }
 
       virtual void set_luarocks_path(const std::string& path) override {
-        luarocks_path = path;
-        store->set_luarocks_path(path);
+        realStore->set_luarocks_path(path);
       }
   };
 
-
-
-} } // namespace rgw::sal
+}} //namespace rgw::sal
