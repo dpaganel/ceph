@@ -62,6 +62,40 @@ using namespace std;
 
 namespace rgw::sal {
 
+    /*user functions*/
+    int TracerUser::remove_user(const DoutPrefixProvider* dpp, optional_yield y)
+    {
+        return realUser->remove_user(dpp, y); //may need to also remove this user - Dan P
+    }
+    int TracerUser::load_user(const DoutPrefixProvider *dpp, optional_yield y)
+    {
+        return realUser->load_user(dpp, y);
+    }
+    int TracerUser::store_user(const DoutPrefixProvider* dpp, optional_yield y, bool exclusive, RGWUserInfo* old_info)
+    {
+        return realUser->store_user(dpp, y, exclusive, old_info);
+    }
+
+    int TracerUser::create_bucket(const DoutPrefixProvider* dpp,
+          const rgw_bucket& b,
+          const std::string& zonegroup_id,
+          rgw_placement_rule& placement_rule,
+          std::string& swift_ver_location,
+          const RGWQuotaInfo* pquota_info,
+          const RGWAccessControlPolicy& policy,
+          Attrs& attrs,
+          RGWBucketInfo& info,
+          obj_version& ep_objv,
+          bool exclusive,
+          bool obj_lock_enabled,
+          bool* existed,
+          req_info& req_info,
+          std::unique_ptr<Bucket>* bucket,
+          optional_yield y)
+    {
+        return realUser->create_bucket(dpp, b, zonegroup_id, placement_rule, swift_ver_location, pquota_info, policy,
+                attrs, info, ep_objv, exclusive, obj_lock_enabled, existed, req_info, bucket, y);
+    }
 
     int TracerUser::list_buckets(const DoutPrefixProvider* dpp, const std::string& marker,
 			       const std::string& end_marker, uint64_t max, bool need_stats,
@@ -80,19 +114,90 @@ namespace rgw::sal {
         optional_yield y, RGWStorageStats* stats,
         ceph::real_time *last_stats_sync,
         ceph::real_time *last_stats_update)
-        {
+    {
             return realUser->read_stats(dpp, y, stats, last_stats_sync, last_stats_update);
-        }
+    }
 
     int TracerUser::read_stats_async(const DoutPrefixProvider *dpp, RGWGetUserStats_CB *cb)
-  {
+    {
       return realUser->read_stats_async(dpp, cb);
+    }
+
+    int TracerUser::merge_and_store_attrs(const DoutPrefixProvider* dpp, Attrs& new_attrs, optional_yield y)
+    {
+        return realUser->merge_and_store_attrs(dpp, new_attrs, y);
+    }
+
+    int TracerUser::complete_flush_stats(const DoutPrefixProvider *dpp, optional_yield y)
+    {
+        return realUser->complete_flush_stats(dpp, y);
+    }
+
+    int TracerUser::read_usage(const DoutPrefixProvider *dpp, uint64_t start_epoch, uint64_t end_epoch, uint32_t max_entries,
+    bool *is_truncated, RGWUsageIter& usage_iter,
+    map<rgw_user_bucket, rgw_usage_log_entry>& usage)
+    {
+        return realUser->read_usage(dpp, start_epoch, end_epoch, max_entries, is_truncated, usage_iter, usage);
+    }
+
+  int TracerUser::trim_usage(const DoutPrefixProvider *dpp, uint64_t start_epoch, uint64_t end_epoch)
+  {
+    return realUser->trim_usage(dpp, start_epoch, end_epoch);
   }
- //I want to get bootup to run before adding any other functions. Dan P
+
+ /*Zonegroup functions */
+
+  const RGWZoneParams& TZone::get_params()
+  {
+    return realZone->get_params();
+  }
+
+  const rgw_zone_id& TZone::get_id()
+  {
+    return realZone->get_id();
+  }
+
+  const RGWRealm& TZone::get_realm()
+  {
+    return realZone->get_realm();
+  }
+
+  bool TZone::is_writeable()
+  {
+    return realZone->is_writeable();
+  }
+
+  bool TZone::has_zonegroup_api(const std::string& api) const
+  {
+    return realZone->has_zonegroup_api(api);
+  }
+
+  const std::string& TZone::get_current_period_id()
+  {
+    return realZone->get_current_period_id();
+  }
+
+  bool TZone::get_redirect_endpoint(std::string* endpoint)
+  {
+    return realZone->get_redirect_endpoint(endpoint);
+  }
+
+  const std::string& TZone::get_name() const
+  {
+    return realZone->get_name();
+  }
+
   const RGWZoneGroup& TZone::get_zonegroup()
   {
-    return trace->get_zone()->get_zonegroup();
+    return realZone->get_zonegroup();
   }
+  
+  int TZone::get_zonegroup(const std::string& id, RGWZoneGroup& zg)
+  {
+      return realZone->get_zonegroup(id, zg);
+  }
+  /*Tracer Driver functions */
+
   
   int TracerDriver::register_to_service_map(const DoutPrefixProvider *dpp, const string& daemon_type,
       const map<string, string>& meta)

@@ -85,6 +85,8 @@ namespace rgw { namespace sal {
       RGWZoneParams *zone_params{nullptr}; /* internal zone params, e.g., rados pools */
       RGWPeriod *current_period{nullptr};
       rgw_zone_id cur_zone_id;
+      Zone* realZone;
+      //A lot of these can probably be removed - Dan P
 
     public:
       TZone(TracerDriver* _tracer) : trace(_tracer) {
@@ -702,7 +704,7 @@ public:
     
 
   public:
-    TracerDriver() : realStore(nullptr) {}
+    TracerDriver() {}
     ~TracerDriver() { delete realStore; }
 
 
