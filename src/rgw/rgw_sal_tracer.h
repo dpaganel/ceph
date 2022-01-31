@@ -45,13 +45,13 @@
 
 namespace rgw { namespace sal {
 
-  class Tracer;
+  class TracerDriver;
 
   class LCTSerializer : public LCSerializer {
   const std::string oid;
 
   public:
-    LCTSerializer(Tracer* trace, const std::string& oid, const std::string& lock_name, const std::string& cookie) {}
+    LCTSerializer(TracerDriver* trace, const std::string& oid, const std::string& lock_name, const std::string& cookie) {}
 
     virtual int try_lock(const DoutPrefixProvider *dpp, utime_t dur, optional_yield y) override { return 0; }
     virtual int unlock() override {
@@ -60,10 +60,10 @@ namespace rgw { namespace sal {
   };
 
   class TracerLifecycle : public Lifecycle {
-  Tracer* trace;
+  TracerDriver* trace;
 
   public:
-    TracerLifecycle(Tracer* _st) : trace(_st) {}
+    TracerLifecycle(TracerDriver* _st) : trace(_st) {}
 
     virtual int get_entry(const std::string& oid, const std::string& marker, LCEntry& entry) override;
     virtual int get_next_entry(const std::string& oid, std::string& marker, LCEntry& entry) override;
@@ -78,7 +78,7 @@ namespace rgw { namespace sal {
     
   class TZone : public Zone {
     protected:
-      Tracer* trace;
+      TracerDriver* trace;
       RGWRealm *realm{nullptr};
       RGWZoneGroup *zonegroup{nullptr};
       RGWZone *zone_public_config{nullptr}; /* external zone params, e.g., entrypoints, log flags, etc. */  
@@ -87,7 +87,7 @@ namespace rgw { namespace sal {
       rgw_zone_id cur_zone_id;
 
     public:
-      TZone(Tracer* _tracer) : trace(_tracer) {
+      TZone(TracerDriver* _tracer) : trace(_tracer) {
         realm = new RGWRealm();
         zonegroup = new RGWZoneGroup();
         zone_public_config = new RGWZone();
@@ -130,12 +130,13 @@ namespace rgw { namespace sal {
 
 class TracerUser : public User {
     private:
-      Tracer *trace;
+      TracerDriver *trace;
+      User *realUser;
 
     public:
-      TracerUser(Tracer *_st, const rgw_user& _u) : User(_u), trace(_st) { }
-      TracerUser(Tracer *_st, const RGWUserInfo& _i) : User(_i), trace(_st) { }
-      TracerUser(Tracer *_st) : trace(_st) { }
+      TracerUser(TracerDriver *_st, const rgw_user& _u) : User(_u), trace(_st) { }
+      TracerUser(TracerDriver *_st, const RGWUserInfo& _i) : User(_i), trace(_st) { }
+      TracerUser(TracerDriver *_st) : trace(_st) { }
       TracerUser(TracerUser& _o) = default;
       TracerUser() {}
 
@@ -183,52 +184,52 @@ class TracerUser : public User {
 
   class TracerBucket : public Bucket {
     private:
-      Tracer *trace;
+      TracerDriver *trace;
       RGWAccessControlPolicy acls;
 
     public:
-      TracerBucket(Tracer *_st)
+      TracerBucket(TracerDriver *_st)
         : trace(_st),
         acls() {
         }
 
-      TracerBucket(Tracer *_st, User* _u)
+      TracerBucket(TracerDriver *_st, User* _u)
         : Bucket(_u),
         trace(_st),
         acls() {
         }
 
-      TracerBucket(Tracer *_st, const rgw_bucket& _b)
+      TracerBucket(TracerDriver *_st, const rgw_bucket& _b)
         : Bucket(_b),
         trace(_st),
         acls() {
         }
 
-      TracerBucket(Tracer *_st, const RGWBucketEnt& _e)
+      TracerBucket(TracerDriver *_st, const RGWBucketEnt& _e)
         : Bucket(_e),
         trace(_st),
         acls() {
         }
 
-      TracerBucket(Tracer *_st, const RGWBucketInfo& _i)
+      TracerBucket(TracerDriver *_st, const RGWBucketInfo& _i)
         : Bucket(_i),
         trace(_st),
         acls() {
         }
 
-      TracerBucket(Tracer *_st, const rgw_bucket& _b, User* _u)
+      TracerBucket(TracerDriver *_st, const rgw_bucket& _b, User* _u)
         : Bucket(_b, _u),
         trace(_st),
         acls() {
         }
 
-      TracerBucket(Tracer *_st, const RGWBucketEnt& _e, User* _u)
+      TracerBucket(TracerDriver *_st, const RGWBucketEnt& _e, User* _u)
         : Bucket(_e, _u),
         trace(_st),
         acls() {
         }
 
-      TracerBucket(Tracer *_st, const RGWBucketInfo& _i, User* _u)
+      TracerBucket(TracerDriver *_st, const RGWBucketInfo& _i, User* _u)
         : Bucket(_i, _u),
         trace(_st),
         acls() {
@@ -288,14 +289,14 @@ class TracerUser : public User {
       virtual int abort_multiparts(const DoutPrefixProvider* dpp,
 				   CephContext* cct) override;
 
-      friend class Tracer;
+      friend class TracerDriver;
   };
 
   class TLuaScriptManager : public LuaScriptManager {
-    Tracer* trace;
+    TracerDriver* trace;
 
     public:
-    TLuaScriptManager(Tracer* _s) : trace(_s)
+    TLuaScriptManager(TracerDriver* _s) : trace(_s)
     {
     }
     virtual ~TLuaScriptManager() = default;
@@ -306,9 +307,9 @@ class TracerUser : public User {
   };
 
   class TOIDCProvider : public RGWOIDCProvider {
-    Tracer* trace;
+    TracerDriver* trace;
     public:
-    TOIDCProvider(Tracer* _store) : trace(_store) {}
+    TOIDCProvider(TracerDriver* _store) : trace(_store) {}
     ~TOIDCProvider() = default;
 
     virtual int store_url(const DoutPrefixProvider *dpp, const std::string& url, bool exclusive, optional_yield y) override { return 0; }
@@ -401,14 +402,14 @@ class TracerUser : public User {
   };
 
   class TracerMultipartUpload : public MultipartUpload {
-    Tracer* trace;
+    TracerDriver* trace;
     TracerMPObj mp_obj;
     ACLOwner owner;
     ceph::real_time mtime;
     rgw_placement_rule placement;
 
   public:
-    TracerMultipartUpload(Tracer* _store, Bucket* _bucket, const std::string& oid, std::optional<std::string> upload_id, ACLOwner _owner, ceph::real_time _mtime) : MultipartUpload(_bucket), trace(_store), mp_obj(oid, upload_id), owner(_owner), mtime(_mtime) {}
+    TracerMultipartUpload(TracerDriver* _store, Bucket* _bucket, const std::string& oid, std::optional<std::string> upload_id, ACLOwner _owner, ceph::real_time _mtime) : MultipartUpload(_bucket), trace(_store), mp_obj(oid, upload_id), owner(_owner), mtime(_mtime) {}
     virtual ~TracerMultipartUpload() = default;
 
     virtual const std::string& get_meta() const { return mp_obj.get_meta(); }
@@ -463,7 +464,7 @@ class TracerUser : public User {
 
     class TObject : public Object {
     private:
-      Tracer* trace;
+      TracerDriver* trace;
       RGWAccessControlPolicy acls;
       /* XXX: to be removed. Till Dan's patch comes, a placeholder
        * for RGWObjState
@@ -502,12 +503,12 @@ class TracerUser : public User {
 
       TObject() = default;
 
-      TObject(Tracer *_st, const rgw_obj_key& _k)
+      TObject(TracerDriver*_st, const rgw_obj_key& _k)
         : Object(_k),
         trace(_st),
         acls() {}
 
-      TObject(Tracer *_st, const rgw_obj_key& _k, Bucket* _b)
+      TObject(TracerDriver*_st, const rgw_obj_key& _k, Bucket* _b)
         : Object(_k, _b),
         trace(_st),
         acls() {}
@@ -590,7 +591,7 @@ class TracerUser : public User {
   class MPTSerializer : public MPSerializer {
 
   public:
-    MPTSerializer(const DoutPrefixProvider *dpp, Tracer* store, TObject* obj, const std::string& lock_name) {}
+    MPTSerializer(const DoutPrefixProvider *dpp, TracerDriver* store, TObject* obj, const std::string& lock_name) {}
 
     virtual int try_lock(const DoutPrefixProvider *dpp, utime_t dur, optional_yield y) override {return 0; }
     virtual int unlock() override { return 0;}
@@ -598,7 +599,7 @@ class TracerUser : public User {
 
   class TracerAtomicWriter : public Writer {
   protected:
-    rgw::sal::Tracer* trace;
+    rgw::sal::TracerDriver* trace;
     const rgw_user& owner;
 	  const rgw_placement_rule *ptail_placement_rule;
 	  uint64_t olh_epoch;
@@ -643,7 +644,7 @@ class TracerUser : public User {
 
   class TracerMultipartWriter : public Writer {
   protected:
-    rgw::sal::Tracer* trace;
+    rgw::sal::TracerDriver* trace;
     const rgw_user& owner;
 	const rgw_placement_rule *ptail_placement_rule;
 	uint64_t olh_epoch;
@@ -693,18 +694,27 @@ public:
 
 
 
-  class Tracer : public Store {
+  class TracerDriver : public Store {
   private:
-    Store* realStore;
+    Store* realStore; /* The one that actually does stuff */
     TZone* zone;
+    
+    
+
   public:
-    Tracer() : realStore(nullptr) {}
-    ~Tracer() { delete realStore; }
+    TracerDriver() : realStore(nullptr) {}
+    ~TracerDriver() { delete realStore; }
 
-  virtual const char* get_name() const override {
+
+      void initialize(Store* inputStore)
+      {
+        this->realStore = inputStore;
+      }
+
+      virtual const char* get_name() const override 
+      {
         return realStore->get_name();
-  }
-
+      }
       virtual std::unique_ptr<User> get_user(const rgw_user& u) override;
       virtual int get_user_by_access_key(const DoutPrefixProvider *dpp, const std::string& key, optional_yield y, std::unique_ptr<User>* user) override;
       virtual int get_user_by_email(const DoutPrefixProvider *dpp, const std::string& email, optional_yield y, std::unique_ptr<User>* user) override;

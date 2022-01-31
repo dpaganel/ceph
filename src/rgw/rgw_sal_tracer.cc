@@ -59,72 +59,51 @@
 #define dout_subsys ceph_subsys_rgw
 
 using namespace std;
-/*
+
 namespace rgw::sal {
 
 
-
-
-
-
-    int TUser::list_buckets(const DoutPrefixProvider* dpp, const std::string& marker,
+    int TracerUser::list_buckets(const DoutPrefixProvider* dpp, const std::string& marker,
 			       const std::string& end_marker, uint64_t max, bool need_stats,
 			       BucketList &buckets, optional_yield y)
     {
-        return user.list_buckets(dpp, marker, end_marker, max, need_stats, buckets, y);
+        return realUser->list_buckets(dpp, marker, end_marker, max, need_stats, buckets, y);
     }
 
-    int TUser::create_bucket(const DoutPrefixProvider *dpp,
-      const rgw_bucket& b,
-      const string& zonegroup_id,
-      rgw_placement_rule& placement_rule,
-      string& swift_ver_location,
-      const RGWQuotaInfo * pquota_info,
-      const RGWAccessControlPolicy& policy,
-      Attrs& attrs,
-      RGWBucketInfo& info,
-      obj_version& ep_objv,
-      bool exclusive,
-      bool obj_lock_enabled,
-      bool *existed,
-      req_info& req_info,
-      std::unique_ptr<Bucket>* bucket_out,
-      optional_yield y)
-    {
-        return user.create_bucket(dpp, b, zonegroup_id, bucket, placement_rule,
-                            swift_ver_location, &pquota_info, policy, attrs,
-                            info, ep_objv, exclusive, obj_lock_enabled, &existed, req_info,
-                            &bucket_out, y);
-    }
 
-    int TUser::read_attrs(const DoutPrefixProvider* dpp, optional_yield y)
+    int TracerUser::read_attrs(const DoutPrefixProvider* dpp, optional_yield y)
     {
-        return user.read_attrs(dpp, y);
+        return realUser->read_attrs(dpp, y);
     }
     
-    int TUser::read_stats(const DoutPrefixProvider *dpp,
+    int TracerUser::read_stats(const DoutPrefixProvider *dpp,
         optional_yield y, RGWStorageStats* stats,
         ceph::real_time *last_stats_sync,
         ceph::real_time *last_stats_update)
         {
-            return user.read_stats(dpp, y, stats, last_stats_sync, last_stats_update);
+            return realUser->read_stats(dpp, y, stats, last_stats_sync, last_stats_update);
         }
 
-    int TUser::read_stats_async(const DoutPrefixProvider *dpp, RGWGetUserStats_CB *cb)
+    int TracerUser::read_stats_async(const DoutPrefixProvider *dpp, RGWGetUserStats_CB *cb)
   {
-      return user.read_stats_async(dpp, cb);
+      return realUser->read_stats_async(dpp, cb);
   }
  //I want to get bootup to run before adding any other functions. Dan P
-#ifdef 0
   const RGWZoneGroup& TZone::get_zonegroup()
   {
-    return store->get_store()->get_zone()->get_zonegroup();
+    return trace->get_zone()->get_zonegroup();
   }
   
-  int TStore::register_to_service_map(const DoutPrefixProvider *dpp, const string& daemon_type,
+  int TracerDriver::register_to_service_map(const DoutPrefixProvider *dpp, const string& daemon_type,
       const map<string, string>& meta)
   {
-    return store->register_to_service_map(dpp, daemon_type, meta);
+    return realStore->register_to_service_map(dpp, daemon_type, meta);
+  }
+
+  void TracerDriver::finalize(void)
+  {
+      if(realStore)
+      realStore->finalize(); //May need to implement additional cleanup for this store itself.
   }
 
 
@@ -133,24 +112,14 @@ namespace rgw::sal {
 
  extern "C" {
 
-     void*newTStore(CephContext *cct, const std::string config_store) //may need to also feed in a string for either rados or dbstore. Dan P
+    void* newTracer(rgw::sal::Store* inputStore) /*takes in a store and wraps */ //may need to also feed in a string for either rados or dbstore. Dan P
     {
-        rgw::sal::TStore *store = new rgw::sal::TStore(); //TODO: make sure that the constructor is ready. Dan P
-        if (store) {
-    #ifdef WITH_RADOSGW_DBSTORE
-        if(config_store == "dbstore") {
-
-            //set up a dbstore and assign it to the Tstore
+        rgw::sal::TracerDriver *trace = new rgw::sal::TracerDriver(); //TODO: make sure that the constructor is ready. Dan P
+        trace->initialize(inputStore);
+        if (trace) {
+            return trace;
         }
-    #endif
-        if(config_store == "rados") {
-
-            //set up a radosStore and assign it to the Tstore
-        }
-        }
-
-        return store;
+        return NULL;
     }
-#endif
 
- }*/
+ }

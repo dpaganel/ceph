@@ -29,6 +29,8 @@
 #include "rgw_sal_dbstore.h"
 #endif
 
+#include "rgw_sal_tracer.h" //get an ifdef here later
+
 #define dout_subsys ceph_subsys_rgw
 
 extern "C" {
@@ -36,6 +38,8 @@ extern rgw::sal::Store* newStore(void);
 #ifdef WITH_RADOSGW_DBSTORE
 extern rgw::sal::Store* newDBStore(CephContext *cct);
 #endif
+/*need ifdef statement Dan P*/
+extern rgw::sal::Store* newTracer(rgw::sal::Store* inputStore);
 }
 /*Dan P: we can still access cct from the argument, so no need to add new arguments?
 *if(cct->tracerDrive.compare == 0) {
@@ -45,7 +49,11 @@ extern rgw::sal::Store* newDBStore(CephContext *cct);
 *}
 */
 rgw::sal::Store* StoreManager::init_storage_provider(const DoutPrefixProvider* dpp, CephContext* cct, const std::string svc, bool use_gc_thread, bool use_lc_thread, bool quota_threads, bool run_sync_thread, bool run_reshard_thread, bool use_cache, bool use_gc)
-{
+{  
+  /*This is a quick and dirty way of getting this to work and I'd like to come up with a cleaner way to link the tracer and the actual store together
+  *once it actually works. Dan P */
+  const auto& config_tracer =g_conf().get_val<bool>("rgw_tracer_drive");
+
   if (svc.compare("rados") == 0) { //Dan P: This comes from the yaml configs - need to figure out how to implement a tracer option
     rgw::sal::Store* store = newStore();
     RGWRados* rados = static_cast<rgw::sal::RadosStore* >(store)->getRados();
@@ -60,6 +68,11 @@ rgw::sal::Store* StoreManager::init_storage_provider(const DoutPrefixProvider* d
                 .set_run_reshard_thread(run_reshard_thread)
                 .initialize(cct, dpp) < 0) {
       delete store; store = nullptr;
+    }
+    if(config_tracer)
+    {
+        rgw::sal::Store* trace = newTracer(store);
+        store = trace;
     }
     return store;
   }
@@ -79,6 +92,12 @@ rgw::sal::Store* StoreManager::init_storage_provider(const DoutPrefixProvider* d
                 .initialize(cct, dpp) < 0) {
       delete store; store = nullptr;
     }
+
+        if(config_tracer)
+    {
+
+    }
+
     return store;
   }
 
@@ -104,6 +123,12 @@ rgw::sal::Store* StoreManager::init_storage_provider(const DoutPrefixProvider* d
     if (r < 0) {
       ldpp_dout(dpp, 0) << "ERROR: failed inserting testid user in dbstore error r=" << r << dendl;
     }
+
+        if(config_tracer)
+    {
+
+    }
+
     return store;
 #endif
   }
