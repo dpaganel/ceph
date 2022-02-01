@@ -198,11 +198,259 @@ namespace rgw::sal {
   }
   /*Tracer Driver functions */
 
+  std::unique_ptr<User> TracerDriver::get_user(const rgw_user &u)
+  {
+    return realStore->get_user(u); //this may be a point to make a new TracerUser, worth asking about -Dan P
+  }
+
+  int TracerDriver::get_user_by_access_key(const DoutPrefixProvider *dpp, const std::string& key, optional_yield y, std::unique_ptr<User>* user)
+  {
+    return realStore->get_user_by_access_key(dpp, key, y, user);
+  }
+
+  int TracerDriver::get_user_by_email(const DoutPrefixProvider *dpp, const std::string& email, optional_yield y, std::unique_ptr<User>* user)
+  {
+    return realStore->get_user_by_email(dpp, email, y, user);
+  }
+
+  int TracerDriver::get_user_by_swift(const DoutPrefixProvider *dpp, const std::string& user_str, optional_yield y, std::unique_ptr<User>* user)
+  {
+    /* Swift keys and subusers are not supported for now */
+    return realStore->get_user_by_swift(dpp, user_str, y, user);
+  }
+
+  std::string TracerDriver::get_cluster_id(const DoutPrefixProvider* dpp,  optional_yield y)
+  {
+    return realStore->get_cluster_id(dpp, y); // for instance unique identifier
+  }
+
+  std::unique_ptr<Object> TracerDriver::get_object(const rgw_obj_key& k)
+  {
+    return realStore->get_object(k);
+  }
+
+   int TracerDriver::get_bucket(const DoutPrefixProvider *dpp, User* u, const rgw_bucket& b, std::unique_ptr<Bucket>* bucket, optional_yield y)
+  {
+    return realStore->get_bucket(dpp, u, b, bucket, y);
+  }
+
+  int TracerDriver::get_bucket(User* u, const RGWBucketInfo& i, std::unique_ptr<Bucket>* bucket)
+  {
+    return realStore->get_bucket(u, i, bucket);
+  }
+
+  int TracerDriver::get_bucket(const DoutPrefixProvider *dpp, User* u, const std::string& tenant, const std::string& name, std::unique_ptr<Bucket>* bucket, optional_yield y)
+  {
+    return realStore->get_bucket(dpp, u, tenant, name, std::move(bucket), y);
+  }
+
+  bool TracerDriver::is_meta_master()
+  {
+    return realStore->is_meta_master();
+  }
+
+  int TracerDriver::forward_request_to_master(const DoutPrefixProvider *dpp, User* user, obj_version *objv,
+      bufferlist& in_data,
+      JSONParser *jp, req_info& info,
+      optional_yield y)
+  {
+    return realStore->forward_request_to_master(dpp, user, objv, in_data, jp, info, y);
+  }
+
+    std::string TracerDriver::zone_unique_id(uint64_t unique_num)
+  {
+    return realStore->zone_unique_id(unique_num);
+  }
+
+  std::string TracerDriver::zone_unique_trans_id(const uint64_t unique_num)
+  {
+    return realStore->zone_unique_trans_id(unique_num);
+  }
+
+  int TracerDriver::cluster_stat(RGWClusterStat& stats)
+  {
+    return realStore->cluster_stat(stats);
+  }
+
+  std::unique_ptr<Lifecycle> TracerDriver::get_lifecycle(void)
+  {
+    return realStore->get_lifecycle();
+  }
+
+  std::unique_ptr<Completions> TracerDriver::get_completions(void)
+  {
+    return realStore->get_completions();
+  }
   
+  std::unique_ptr<Notification> TracerDriver::get_notification(
+    rgw::sal::Object* obj, rgw::sal::Object* src_obj, struct req_state* s,
+    rgw::notify::EventType event_type, const std::string* object_name)
+  {
+    return realStore->get_notification(obj, src_obj, s, event_type, object_name);
+  }
+
+  std::unique_ptr<Notification> TracerDriver::get_notification(
+    const DoutPrefixProvider* dpp, rgw::sal::Object* obj,
+    rgw::sal::Object* src_obj, RGWObjectCtx* rctx,
+    rgw::notify::EventType event_type, rgw::sal::Bucket* _bucket,
+    std::string& _user_id, std::string& _user_tenant, std::string& _req_id,
+    optional_yield y)
+  {
+    return realStore->get_notification(dpp, obj, src_obj, rctx, event_type, _bucket, _user_id, _user_tenant, _req_id, y);
+  }
+
+  RGWLC* TracerDriver::get_rgwlc(void) {
+    return realStore->get_rgwlc();
+  }
+
+  int TracerDriver::log_usage(const DoutPrefixProvider *dpp, map<rgw_user_bucket, RGWUsageBatch>& usage_info)
+  {
+    return realStore->log_usage(dpp, usage_info);
+  }
+
+  int TracerDriver::log_op(const DoutPrefixProvider *dpp, string& oid, bufferlist& bl)
+  {
+    return realStore->log_op(dpp, oid, bl);
+  }
+
   int TracerDriver::register_to_service_map(const DoutPrefixProvider *dpp, const string& daemon_type,
       const map<string, string>& meta)
   {
     return realStore->register_to_service_map(dpp, daemon_type, meta);
+  }
+
+  void TracerDriver::get_ratelimit(RGWRateLimitInfo& bucket_ratelimit, RGWRateLimitInfo& user_ratelimit, RGWRateLimitInfo& anon_ratelimit)
+  {
+    return realStore->get_ratelimit(bucket_ratelimit, user_ratelimit, anon_ratelimit);
+  }
+
+  void TracerDriver::get_quota(RGWQuotaInfo& bucket_quota, RGWQuotaInfo& user_quota)
+  {
+    return realStore->get_quota(bucket_quota, user_quota);
+  }
+
+  int TracerDriver::set_buckets_enabled(const DoutPrefixProvider *dpp, vector<rgw_bucket>& buckets, bool enabled)
+  {
+    return realStore->set_buckets_enabled(dpp, buckets, enabled);
+  }
+
+  int TracerDriver::get_sync_policy_handler(const DoutPrefixProvider *dpp,
+      std::optional<rgw_zone_id> zone,
+      std::optional<rgw_bucket> bucket,
+      RGWBucketSyncPolicyHandlerRef *phandler,
+      optional_yield y)
+  {
+    return realStore->get_sync_policy_handler(dpp, zone, bucket, phandler, y);
+  }
+
+  RGWDataSyncStatusManager* TracerDriver::get_data_sync_manager(const rgw_zone_id& source_zone)
+  {
+    return realStore->get_data_sync_manager(source_zone);
+  }
+
+  int TracerDriver::read_all_usage(const DoutPrefixProvider *dpp, uint64_t start_epoch, uint64_t end_epoch, 
+      uint32_t max_entries, bool *is_truncated,
+      RGWUsageIter& usage_iter,
+      map<rgw_user_bucket, rgw_usage_log_entry>& usage)
+  {
+    return realStore->read_all_usage(dpp, start_epoch, end_epoch, max_entries, is_truncated, usage_iter, usage);
+  }
+
+  int TracerDriver::trim_all_usage(const DoutPrefixProvider *dpp, uint64_t start_epoch, uint64_t end_epoch)
+  {
+    return realStore->trim_all_usage(dpp, start_epoch, end_epoch);
+  }
+
+  int TracerDriver::get_config_key_val(string name, bufferlist *bl)
+  {
+    return realStore->get_config_key_val(name, bl);
+  }
+
+  int TracerDriver::meta_list_keys_init(const DoutPrefixProvider *dpp, const string& section, const string& marker, void** phandle)
+  {
+    return realStore->meta_list_keys_init(dpp, section, marker, phandle);
+  }
+
+  int TracerDriver::meta_list_keys_next(const DoutPrefixProvider *dpp, void* handle, int max, list<string>& keys, bool* truncated)
+  {
+    return realStore->meta_list_keys_next(dpp, handle, max, keys, truncated);
+  }
+
+  void TracerDriver::meta_list_keys_complete(void* handle)
+  {
+    return realStore->meta_list_keys_complete(handle);
+  }
+
+  std::string TracerDriver::meta_get_marker(void* handle)
+  {
+    return realStore->meta_get_marker(handle);
+  }
+
+  int TracerDriver::meta_remove(const DoutPrefixProvider *dpp, string& metadata_key, optional_yield y)
+  {
+    return realStore->meta_remove(dpp, metadata_key, y);
+  }
+
+  std::unique_ptr<LuaScriptManager> TracerDriver::get_lua_script_manager()
+  {
+    return realStore->get_lua_script_manager();
+  }
+
+  std::unique_ptr<RGWRole> TracerDriver::get_role(std::string name,
+      std::string tenant,
+      std::string path,
+      std::string trust_policy,
+      std::string max_session_duration_str,
+      std::multimap<std::string,std::string> tags)
+  {
+    return realStore->get_role(name, tenant, path, trust_policy, max_session_duration_str, tags);
+  }
+
+  std::unique_ptr<RGWRole> TracerDriver::get_role(std::string id)
+  {
+    return realStore->get_role(id);
+  }
+
+  int TracerDriver::get_roles(const DoutPrefixProvider *dpp,
+      optional_yield y,
+      const std::string& path_prefix,
+      const std::string& tenant,
+      vector<std::unique_ptr<RGWRole>>& roles)
+  {
+    return realStore->get_roles(dpp, y, path_prefix, tenant, roles);
+  }
+
+  std::unique_ptr<RGWOIDCProvider> TracerDriver::get_oidc_provider()
+  {
+    return realStore->get_oidc_provider();
+  }
+
+    int TracerDriver::get_oidc_providers(const DoutPrefixProvider *dpp,
+      const std::string& tenant,
+      vector<std::unique_ptr<RGWOIDCProvider>>& providers)
+  {
+    return realStore->get_oidc_providers(dpp, tenant, providers);
+  }
+
+  std::unique_ptr<Writer> TracerDriver::get_append_writer(const DoutPrefixProvider *dpp,
+				  optional_yield y,
+				  std::unique_ptr<rgw::sal::Object> _head_obj,
+				  const rgw_user& owner, RGWObjectCtx& obj_ctx,
+				  const rgw_placement_rule *ptail_placement_rule,
+				  const std::string& unique_tag,
+				  uint64_t position,
+				  uint64_t *cur_accounted_size) {
+    return realStore->get_append_writer(dpp, y, std::move(_head_obj), owner, obj_ctx, ptail_placement_rule, unique_tag, position, cur_accounted_size);
+  }
+
+    std::unique_ptr<Writer> TracerDriver::get_atomic_writer(const DoutPrefixProvider *dpp,
+				  optional_yield y,
+				  std::unique_ptr<rgw::sal::Object> _head_obj,
+				  const rgw_user& owner, RGWObjectCtx& obj_ctx,
+				  const rgw_placement_rule *ptail_placement_rule,
+				  uint64_t olh_epoch,
+				  const std::string& unique_tag) {
+    return realStore->get_atomic_writer(dpp, y, std::move(_head_obj), owner, obj_ctx, ptail_placement_rule, olh_epoch, unique_tag);
   }
 
   void TracerDriver::finalize(void)
