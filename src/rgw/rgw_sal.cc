@@ -39,7 +39,7 @@ extern rgw::sal::Store* newStore(void);
 extern rgw::sal::Store* newDBStore(CephContext *cct);
 #endif
 /*need ifdef statement Dan P*/
-extern rgw::sal::Store* newTracer(rgw::sal::Store* inputStore);
+extern rgw::sal::Store* newTracer(const DoutPrefixProvider *dpp, rgw::sal::Store* inputStore); //Clean this up - Dan P
 }
 /*Dan P: we can still access cct from the argument, so no need to add new arguments?
 *if(cct->tracerDrive.compare == 0) {
@@ -52,8 +52,9 @@ rgw::sal::Store* StoreManager::init_storage_provider(const DoutPrefixProvider* d
 {  
   /*This is a quick and dirty way of getting this to work and I'd like to come up with a cleaner way to link the tracer and the actual store together
   *once it actually works. Dan P */
-  const auto& config_tracer =g_conf().get_val<bool>("rgw_tracer_drive");
+  //const auto& config_tracer =g_conf().get_val<bool>("rgw_tracer_drive");
 
+  ldpp_dout(dpp, 0) << "Initializing storage: " << svc << dendl;
   if (svc.compare("rados") == 0) { //Dan P: This comes from the yaml configs - need to figure out how to implement a tracer option
     rgw::sal::Store* store = newStore();
     RGWRados* rados = static_cast<rgw::sal::RadosStore* >(store)->getRados();
@@ -69,12 +70,13 @@ rgw::sal::Store* StoreManager::init_storage_provider(const DoutPrefixProvider* d
                 .initialize(cct, dpp) < 0) {
       delete store; store = nullptr;
     }
-    if(config_tracer)
-    {
-        rgw::sal::Store* trace = newTracer(store);
-        store = trace;
-    }
-    return store;
+
+        rgw::sal::Store* trace = newTracer(dpp, store); //forcing tracer to activate for testing - Dan P
+        //store = trace;
+
+        ldpp_dout(dpp, 0) << "Post TracerDriver Setup" << dendl;
+
+    return trace/*store*/;
   }
   else if (svc.compare("d3n") == 0) {
     rgw::sal::RadosStore *store = new rgw::sal::RadosStore();
@@ -92,12 +94,10 @@ rgw::sal::Store* StoreManager::init_storage_provider(const DoutPrefixProvider* d
                 .initialize(cct, dpp) < 0) {
       delete store; store = nullptr;
     }
-
-        if(config_tracer)
-    {
-
-    }
-
+      /*
+        rgw::sal::Store* trace = newTracer(dpp, store); //forcing tracer to activate for testing - Dan P
+        store = trace;
+        */
     return store;
   }
 
@@ -123,12 +123,10 @@ rgw::sal::Store* StoreManager::init_storage_provider(const DoutPrefixProvider* d
     if (r < 0) {
       ldpp_dout(dpp, 0) << "ERROR: failed inserting testid user in dbstore error r=" << r << dendl;
     }
-
-        if(config_tracer)
-    {
-
-    }
-
+      /*
+        rgw::sal::Store* trace = newTracer(dpp, store); //forcing tracer to activate for testing - Dan P
+        store = trace;
+      */
     return store;
 #endif
   }

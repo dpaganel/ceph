@@ -134,10 +134,10 @@ class TracerUser : public User {
     private:
       TracerDriver *trace;
       User *realUser;
-
+      //std::unique_ptr<User> realUser;
     public:
-      TracerUser(TracerDriver *_st, const rgw_user& _u) : User(_u), trace(_st) { }
-      TracerUser(TracerDriver *_st, const RGWUserInfo& _i) : User(_i), trace(_st) { }
+      TracerUser(TracerDriver *_st, const rgw_user& _u, User * _ru) : User(_u), trace(_st), realUser(_ru) { }
+      TracerUser(TracerDriver *_st, const RGWUserInfo& _i, User * _ru) : User(_i), trace(_st), realUser(_ru) { }
       TracerUser(TracerDriver *_st) : trace(_st) { }
       TracerUser(TracerUser& _o) = default;
       TracerUser() {}
@@ -187,6 +187,7 @@ class TracerUser : public User {
   class TracerBucket : public Bucket {
     private:
       TracerDriver *trace;
+      Bucket *realBucket;
       RGWAccessControlPolicy acls;
 
     public:

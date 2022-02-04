@@ -23,6 +23,7 @@
 #include <system_error>
 #include <unistd.h>
 #include <sstream>
+#include "common/dout.h"
 
 #include "common/Clock.h"
 
@@ -57,6 +58,8 @@
 //dbstore includes
 
 #define dout_subsys ceph_subsys_rgw
+//for dout
+#define dout_context g_ceph_context
 
 using namespace std;
 
@@ -93,8 +96,13 @@ namespace rgw::sal {
           std::unique_ptr<Bucket>* bucket,
           optional_yield y)
     {
-        return realUser->create_bucket(dpp, b, zonegroup_id, placement_rule, swift_ver_location, pquota_info, policy,
+        
+        ldpp_dout(dpp, 20) << "TRACER: recieved operation: create_bucket" << dendl;
+        int r;
+        r = realUser->create_bucket(dpp, b, zonegroup_id, placement_rule, swift_ver_location, pquota_info, policy,
                 attrs, info, ep_objv, exclusive, obj_lock_enabled, existed, req_info, bucket, y);
+        ldpp_dout(dpp, 20) << "TRACER: Primary store recieved and carried out operation: create bucket" << dendl;
+        return r;
     }
 
     int TracerUser::list_buckets(const DoutPrefixProvider* dpp, const std::string& marker,
@@ -200,12 +208,27 @@ namespace rgw::sal {
 
   std::unique_ptr<User> TracerDriver::get_user(const rgw_user &u)
   {
-    return realStore->get_user(u); //this may be a point to make a new TracerUser, worth asking about -Dan P
+    dout(20) << "TRACER: intercepted operation: get_user" << dendl;
+    //User * ret = make_unique<TracerUser>(this, u, std::move(realStore->get_user(u)))
+    return realStore->get_user(u);
   }
 
   int TracerDriver::get_user_by_access_key(const DoutPrefixProvider *dpp, const std::string& key, optional_yield y, std::unique_ptr<User>* user)
   {
-    return realStore->get_user_by_access_key(dpp, key, y, user);
+    /*
+      RGWUserInfo uinfo;
+      User *u;
+      int ret = 0;
+    */
+      /*this is where the objv_tracer would be - Dan P */
+
+      //Some sort of control function [ctl()?]
+
+    ldpp_dout(dpp,20) << "Operation: get_user_by_access_key, key: " << key << dendl;
+    int r;
+    r = realStore->get_user_by_access_key(dpp, key, y, user);
+    ldpp_dout(dpp,20) << "Real store returned from operation: get_user_by_access_key" << dendl;
+    return r;
   }
 
   int TracerDriver::get_user_by_email(const DoutPrefixProvider *dpp, const std::string& email, optional_yield y, std::unique_ptr<User>* user)
@@ -226,22 +249,34 @@ namespace rgw::sal {
 
   std::unique_ptr<Object> TracerDriver::get_object(const rgw_obj_key& k)
   {
+    dout(20) << "TRACER: recieved operation: get_object" << dendl;
     return realStore->get_object(k);
   }
 
    int TracerDriver::get_bucket(const DoutPrefixProvider *dpp, User* u, const rgw_bucket& b, std::unique_ptr<Bucket>* bucket, optional_yield y)
   {
-    return realStore->get_bucket(dpp, u, b, bucket, y);
+    int ret;
+    dout(20) << "TRACER: intercepting operation: get_bucket type 1, from store: " << this->get_name() << dendl;
+    ret = realStore->get_bucket(dpp, u, b, bucket, y);
+    dout(20) << "TRACER: Returned from get_bucket" << dendl;
+    return ret;
   }
 
   int TracerDriver::get_bucket(User* u, const RGWBucketInfo& i, std::unique_ptr<Bucket>* bucket)
   {
-    return realStore->get_bucket(u, i, bucket);
+    int ret;
+    dout(20) << "TRACER: intercepting operation: get_bucket type 2, from store: " << this->get_name() << dendl;
+    ret = realStore->get_bucket(u, i, bucket);
+    dout(20) << "TRACER: Returned from get_bucket" << dendl;
+    return ret;
   }
 
   int TracerDriver::get_bucket(const DoutPrefixProvider *dpp, User* u, const std::string& tenant, const std::string& name, std::unique_ptr<Bucket>* bucket, optional_yield y)
   {
-    return realStore->get_bucket(dpp, u, tenant, name, std::move(bucket), y);
+    int ret;
+    dout(20) << "TRACER: intercepting operation: get_bucket type 3, from store: " << this->get_name() << dendl;
+    ret = realStore->get_bucket(dpp, u, tenant, name, std::move(bucket), y);
+    return ret;
   }
 
   bool TracerDriver::is_meta_master()
@@ -465,13 +500,16 @@ namespace rgw::sal {
 
  extern "C" {
 
-    void* newTracer(rgw::sal::Store* inputStore) /*takes in a store and wraps */ //may need to also feed in a string for either rados or dbstore. Dan P
+    void* newTracer(const DoutPrefixProvider *dpp, rgw::sal::Store* inputStore) /*takes in a store and wraps */ //may need to also feed in a string for either rados or dbstore. Dan P
     {
+      
         rgw::sal::TracerDriver *trace = new rgw::sal::TracerDriver(); //TODO: make sure that the constructor is ready. Dan P
         trace->initialize(inputStore);
         if (trace) {
+            ldpp_dout(dpp, 0) << "TracerDriver initialized, intercepting traffic to store name: " << trace->get_name() << dendl; 
             return trace;
         }
+        ldpp_dout(dpp, 0) << "ERROR: TracerDriver failed to link to store" << dendl;
         return NULL;
     }
 
