@@ -210,20 +210,13 @@ namespace rgw::sal {
   {
     dout(20) << "TRACER: intercepted operation: get_user" << dendl;
     std::unique_ptr<User> ret = make_unique<TracerUser>(this, u, std::move(realStore->get_user(u)));
+    dout(20) << "TRACER: returned operation: get_user" << dendl;
     return realStore->get_user(u);
   }
 
   int TracerDriver::get_user_by_access_key(const DoutPrefixProvider *dpp, const std::string& key, optional_yield y, std::unique_ptr<User>* user)
   {
-    /*
-      RGWUserInfo uinfo;
-      User *u;
-      int ret = 0;
-    */
-      /*this is where the objv_tracer would be - Dan P */
-
-      //Some sort of control function [ctl()?]
-
+    /* pointer user should be a TracerUser */
     ldpp_dout(dpp,20) << "Operation: get_user_by_access_key, key: " << key << dendl;
     int r;
     r = realStore->get_user_by_access_key(dpp, key, y, user);
