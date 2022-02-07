@@ -133,17 +133,17 @@ namespace rgw { namespace sal {
 class TracerUser : public User {
     private:
       TracerDriver *trace;
-      User *realUser;
-      //std::unique_ptr<User> realUser;
+      //User *realUser;
+      std::unique_ptr<User> realUser;
     public:
-      TracerUser(TracerDriver *_st, const rgw_user& _u, User * _ru) : User(_u), trace(_st), realUser(_ru) { }
-      TracerUser(TracerDriver *_st, const RGWUserInfo& _i, User * _ru) : User(_i), trace(_st), realUser(_ru) { }
+      TracerUser(TracerDriver *_st, const rgw_user& _u, std::unique_ptr<User> _ru) : User(_u), trace(_st), realUser(std::move(_ru)) { }
+      TracerUser(TracerDriver *_st, const RGWUserInfo& _i, std::unique_ptr<User> _ru) : User(_i), trace(_st), realUser(std::move(_ru)) { }
       TracerUser(TracerDriver *_st) : trace(_st) { }
-      TracerUser(TracerUser& _o) = default;
+      TracerUser(TracerUser& _o, std::unique_ptr<User> _ru) : realUser(std::move(_ru)) {}
       TracerUser() {}
 
       virtual std::unique_ptr<User> clone() override {
-        return std::unique_ptr<User>(new TracerUser(*this));
+        return std::unique_ptr<User>(new TracerUser(*this, std::move(this->realUser)));
       }
       int list_buckets(const DoutPrefixProvider *dpp, const std::string& marker, const std::string& end_marker,
           uint64_t max, bool need_stats, BucketList& buckets, optional_yield y) override;

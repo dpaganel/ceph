@@ -209,7 +209,7 @@ namespace rgw::sal {
   std::unique_ptr<User> TracerDriver::get_user(const rgw_user &u)
   {
     dout(20) << "TRACER: intercepted operation: get_user" << dendl;
-    //User * ret = make_unique<TracerUser>(this, u, std::move(realStore->get_user(u)))
+    std::unique_ptr<User> ret = make_unique<TracerUser>(this, u, std::move(realStore->get_user(u)));
     return realStore->get_user(u);
   }
 
