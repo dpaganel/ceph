@@ -138,12 +138,17 @@ class TracerUser : public User {
     public:
       TracerUser(TracerDriver *_st, const rgw_user& _u, std::unique_ptr<User> _ru) : User(_u), trace(_st), realUser(std::move(_ru)) { }
       TracerUser(TracerDriver *_st, const RGWUserInfo& _i, std::unique_ptr<User> _ru) : User(_i), trace(_st), realUser(std::move(_ru)) { }
+      TracerUser(TracerDriver * _st, const RGWUserInfo& _i, std::unique_ptr<User>* _ru) : User(_i), trace(_st),  realUser(std::move(* _ru)) {}
       TracerUser(TracerDriver *_st) : trace(_st) { }
       TracerUser(TracerUser& _o, std::unique_ptr<User> _ru) : realUser(std::move(_ru)) {}
       TracerUser() {}
 
       virtual std::unique_ptr<User> clone() override {
         return std::unique_ptr<User>(new TracerUser(*this, std::move(this->realUser)));
+      }
+      std::unique_ptr<User> get_real_user()
+      {
+        return std::move(realUser);
       }
       int list_buckets(const DoutPrefixProvider *dpp, const std::string& marker, const std::string& end_marker,
           uint64_t max, bool need_stats, BucketList& buckets, optional_yield y) override;
@@ -187,8 +192,9 @@ class TracerUser : public User {
   class TracerBucket : public Bucket {
     private:
       TracerDriver *trace;
-      Bucket *realBucket;
       RGWAccessControlPolicy acls;
+      std::unique_ptr<Bucket> realBucket;
+      
 
     public:
       TracerBucket(TracerDriver *_st)
@@ -220,16 +226,18 @@ class TracerUser : public User {
         acls() {
         }
 
-      TracerBucket(TracerDriver *_st, const rgw_bucket& _b, User* _u)
+      TracerBucket(TracerDriver *_st, const rgw_bucket& _b, User* _u, std::unique_ptr<Bucket>* _rb)
         : Bucket(_b, _u),
         trace(_st),
-        acls() {
+        acls(),
+        realBucket(std::move(* _rb))  {
         }
 
       TracerBucket(TracerDriver *_st, const RGWBucketEnt& _e, User* _u)
         : Bucket(_e, _u),
         trace(_st),
-        acls() {
+        acls()
+        {
         }
 
       TracerBucket(TracerDriver *_st, const RGWBucketInfo& _i, User* _u)

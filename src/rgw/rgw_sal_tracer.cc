@@ -68,14 +68,17 @@ namespace rgw::sal {
     /*user functions*/
     int TracerUser::remove_user(const DoutPrefixProvider* dpp, optional_yield y)
     {
-        return realUser->remove_user(dpp, y); //may need to also remove this user - Dan P
+       ldpp_dout(dpp, 20) << "TRACER:USER: recieved operation: remove_user" << dendl;
+       return realUser->remove_user(dpp, y); //may need to also remove this user - Dan P
     }
     int TracerUser::load_user(const DoutPrefixProvider *dpp, optional_yield y)
     {
+      ldpp_dout(dpp, 20) << "TRACER:USER: recieved operation: load_user" << dendl;
         return realUser->load_user(dpp, y);
     }
     int TracerUser::store_user(const DoutPrefixProvider* dpp, optional_yield y, bool exclusive, RGWUserInfo* old_info)
     {
+      ldpp_dout(dpp, 20) << "TRACER:USER: recieved operation: store_user" << dendl;
         return realUser->store_user(dpp, y, exclusive, old_info);
     }
 
@@ -97,11 +100,11 @@ namespace rgw::sal {
           optional_yield y)
     {
         
-        ldpp_dout(dpp, 20) << "TRACER: recieved operation: create_bucket" << dendl;
+        ldpp_dout(dpp, 20) << "TRACER:USER: recieved operation: create_bucket" << dendl;
         int r;
         r = realUser->create_bucket(dpp, b, zonegroup_id, placement_rule, swift_ver_location, pquota_info, policy,
                 attrs, info, ep_objv, exclusive, obj_lock_enabled, existed, req_info, bucket, y);
-        ldpp_dout(dpp, 20) << "TRACER: Primary store recieved and carried out operation: create bucket" << dendl;
+        ldpp_dout(dpp, 20) << "TRACER:USER: Primary store recieved and carried out operation: create bucket" << dendl;
         return r;
     }
 
@@ -216,12 +219,31 @@ namespace rgw::sal {
 
   int TracerDriver::get_user_by_access_key(const DoutPrefixProvider *dpp, const std::string& key, optional_yield y, std::unique_ptr<User>* user)
   {
-    /* pointer user should be a TracerUser */
-    ldpp_dout(dpp,20) << "Operation: get_user_by_access_key, key: " << key << dendl;
-    int r;
-    r = realStore->get_user_by_access_key(dpp, key, y, user);
-    ldpp_dout(dpp,20) << "Real store returned from operation: get_user_by_access_key" << dendl;
-    return r;
+    ldpp_dout(dpp,20) << "TRACER: intercepted operation: get_user_by_access_key, key: " << key << dendl;
+
+    //RGWUserInfo uinfo;
+    User *u;
+    int ret = 0;
+    RGWObjVersionTracker objv_tracker;
+    
+    std::unique_ptr<User>* storeUser = user;
+
+    ret = realStore->get_user_by_access_key(dpp, key, y, storeUser);
+
+    if (ret < 0)
+      return ret;
+      
+    u = new TracerUser(this, storeUser->get()->get_info(), std::move(user));
+
+    if (!u)
+      return -ENOMEM;
+
+    u->get_version_tracker() = objv_tracker;
+    user->reset(u);
+
+    ldpp_dout(dpp,20) << "TRACER: returned operation: get_user_by_access_key" << dendl;
+
+    return 0;
   }
 
   int TracerDriver::get_user_by_email(const DoutPrefixProvider *dpp, const std::string& email, optional_yield y, std::unique_ptr<User>* user)
@@ -249,8 +271,22 @@ namespace rgw::sal {
    int TracerDriver::get_bucket(const DoutPrefixProvider *dpp, User* u, const rgw_bucket& b, std::unique_ptr<Bucket>* bucket, optional_yield y)
   {
     int ret;
+    Bucket * bp;
+    
     dout(20) << "TRACER: intercepting operation: get_bucket type 1, from store: " << this->get_name() << dendl;
-    ret = realStore->get_bucket(dpp, u, b, bucket, y);
+    std::unique_ptr<Bucket> * storeBucket = bucket;
+    ret = realStore->get_bucket(dpp, u, b, storeBucket, y);
+
+    if (ret < 0)
+      return ret;
+
+    bp = new TracerBucket(this, storeBucket->get()->get_info(), std::move(bucket));
+    
+    if (!b)
+      return -ENOMEM;
+
+    bp = new TracerBucket(this, b, u, bucket);
+    bucket = reset(bp);
     dout(20) << "TRACER: Returned from get_bucket" << dendl;
     return ret;
   }
