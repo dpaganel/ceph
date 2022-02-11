@@ -133,7 +133,6 @@ namespace rgw { namespace sal {
 class TracerUser : public User {
     private:
       TracerDriver *trace;
-      //User *realUser;
       std::unique_ptr<User> realUser;
     public:
       TracerUser(TracerDriver *_st, const rgw_user& _u, std::unique_ptr<User> _ru) : User(_u), trace(_st), realUser(std::move(_ru)) { }
@@ -146,10 +145,7 @@ class TracerUser : public User {
       virtual std::unique_ptr<User> clone() override {
         return std::unique_ptr<User>(new TracerUser(*this, std::move(this->realUser)));
       }
-      std::unique_ptr<User> get_real_user()
-      {
-        return std::move(realUser);
-      }
+
       int list_buckets(const DoutPrefixProvider *dpp, const std::string& marker, const std::string& end_marker,
           uint64_t max, bool need_stats, BucketList& buckets, optional_yield y) override;
       virtual int create_bucket(const DoutPrefixProvider* dpp,
@@ -197,6 +193,11 @@ class TracerUser : public User {
       
 
     public:
+    
+      TracerBucket(TracerBucket &_b, std::unique_ptr<Bucket> _rb) 
+      : realBucket(std::move(_rb)) 
+      {}
+
       TracerBucket(TracerDriver *_st)
         : trace(_st),
         acls() {
@@ -226,11 +227,18 @@ class TracerUser : public User {
         acls() {
         }
 
-      TracerBucket(TracerDriver *_st, const rgw_bucket& _b, User* _u, std::unique_ptr<Bucket>* _rb)
-        : Bucket(_b, _u),
+        TracerBucket(TracerDriver *_st, const RGWBucketInfo& _i, std::unique_ptr<Bucket> * _rb)
+        : Bucket(_i),
         trace(_st),
         acls(),
-        realBucket(std::move(* _rb))  {
+        realBucket(std::move(* _rb)) {
+        }
+
+      TracerBucket(TracerDriver *_st, const rgw_bucket& _b, User* _u)
+        : Bucket(_b, _u),
+        trace(_st),
+        acls()
+        {
         }
 
       TracerBucket(TracerDriver *_st, const RGWBucketEnt& _e, User* _u)
@@ -248,6 +256,9 @@ class TracerUser : public User {
 
       ~TracerBucket() { }
 
+      virtual std::unique_ptr<Bucket> clone() override {
+        return std::unique_ptr<Bucket>(new TracerBucket(*this, std::move(this->realBucket)));
+      }
       virtual std::unique_ptr<Object> get_object(const rgw_obj_key& k) override;
       virtual int list(const DoutPrefixProvider *dpp, ListParams&, int, ListResults&, optional_yield y) override;
       virtual int remove_bucket(const DoutPrefixProvider *dpp, bool delete_children, bool forward_to_master, req_info* req_info, optional_yield y) override;
@@ -283,9 +294,6 @@ class TracerUser : public User {
       virtual int rebuild_index(const DoutPrefixProvider *dpp) override;
       virtual int set_tag_timeout(const DoutPrefixProvider *dpp, uint64_t timeout) override;
       virtual int purge_instance(const DoutPrefixProvider *dpp) override;
-      virtual std::unique_ptr<Bucket> clone() override {
-        return std::make_unique<TracerBucket>(*this);
-      }
       virtual std::unique_ptr<MultipartUpload> get_multipart_upload(
 				const std::string& oid, std::optional<std::string> upload_id,
 				ACLOwner owner={}, ceph::real_time mtime=ceph::real_clock::now()) override;

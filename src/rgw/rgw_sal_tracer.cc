@@ -274,19 +274,19 @@ namespace rgw::sal {
     Bucket * bp;
     
     dout(20) << "TRACER: intercepting operation: get_bucket type 1, from store: " << this->get_name() << dendl;
-    std::unique_ptr<Bucket> * storeBucket = bucket;
+    std::unique_ptr<Bucket> * storeBucket = std::move(bucket);
     ret = realStore->get_bucket(dpp, u, b, storeBucket, y);
 
     if (ret < 0)
       return ret;
 
-    bp = new TracerBucket(this, storeBucket->get()->get_info(), std::move(bucket));
+    bp = new TracerBucket(this, storeBucket->get()->get_info(), storeBucket);
     
-    if (!b)
+    if (!bp)
       return -ENOMEM;
 
-    bp = new TracerBucket(this, b, u, bucket);
-    bucket = reset(bp);
+    
+    bucket->reset(bp);
     dout(20) << "TRACER: Returned from get_bucket" << dendl;
     return ret;
   }
