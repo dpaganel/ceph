@@ -207,6 +207,237 @@ namespace rgw::sal {
   {
       return realZone->get_zonegroup(id, zg);
   }
+  /*Tracerbucket functions */
+
+  std::unique_ptr<Object> TracerBucket::get_object(const rgw_obj_key& k)
+  {
+    /* TODO: reimplement when TObjects are complete
+    return std::make_unique<TObject>(this->trace, k, this);
+    */
+    return realBucket->get_object(k);
+  }
+
+  int TracerBucket::list(const DoutPrefixProvider *dpp, ListParams& params, int max, ListResults& results, optional_yield y)
+  {
+    return realBucket->list(dpp, params, max, results, y);
+  }
+
+  /*This particular function needs more fleshing out*/
+  int TracerBucket::remove_bucket(const DoutPrefixProvider *dpp, bool delete_children, bool forward_to_master, req_info* req_info, optional_yield y)
+  {
+    int ret;
+
+    ret = load_bucket(dpp, y);
+    if (ret < 0)
+      return ret;
+
+    /* XXX: handle delete_children */
+
+    if (!delete_children) {
+      /* Check if there are any objects */
+      rgw::sal::Bucket::ListParams params;
+      params.list_versions = true;
+      params.allow_unordered = true;
+
+      rgw::sal::Bucket::ListResults results;
+
+      results.objs.clear();
+
+      ret = list(dpp, params, 2, results, null_yield);
+
+      if (ret < 0) {
+        ldpp_dout(dpp, 20) << __func__ << ": Bucket list objects returned " <<
+        ret << dendl;
+        return ret;
+      }
+
+      if (!results.objs.empty()) {
+        ret = -ENOTEMPTY;
+        ldpp_dout(dpp, -1) << __func__ << ": Bucket Not Empty.. returning " <<
+        ret << dendl;
+        return ret;
+      }
+    }
+
+    //ret = store->getDB()->remove_bucket(dpp, info);
+
+    return ret;
+  }
+
+  int TracerBucket::remove_bucket_bypass_gc(int concurrent_max, bool
+					keep_index_consistent,
+					optional_yield y, const
+					DoutPrefixProvider *dpp) {
+    return realBucket->remove_bucket_bypass_gc(concurrent_max, keep_index_consistent, y, dpp);
+  }
+
+  int TracerBucket::set_acl(const DoutPrefixProvider *dpp, RGWAccessControlPolicy &acl, optional_yield y)
+  {
+    /*
+    int ret = 0;
+    bufferlist aclbl;
+
+    acls = acl;
+    acl.encode(aclbl);
+
+    Attrs attrs = get_attrs();
+    attrs[RGW_ATTR_ACL] = aclbl;
+
+    ret = store->getDB()->update_bucket(dpp, "attrs", info, false, &(acl.get_owner().get_id()), &attrs, nullptr, nullptr);
+
+    return ret;
+    */
+    return realBucket->set_acl(dpp, acl, y);
+  }
+
+  int TracerBucket::load_bucket(const DoutPrefixProvider *dpp, optional_yield y, bool get_stats)
+  {
+    return realBucket->load_bucket(dpp, y, get_stats);
+  }
+
+    int TracerBucket::read_stats(const DoutPrefixProvider *dpp, int shard_id,
+      std::string *bucket_ver, std::string *master_ver,
+      std::map<RGWObjCategory, RGWStorageStats>& stats,
+      std::string *max_marker, bool *syncstopped)
+  {
+    return realBucket->read_stats(dpp, shard_id, bucket_ver, master_ver, stats, max_marker, syncstopped);
+  }
+
+  int TracerBucket::read_stats_async(const DoutPrefixProvider *dpp, int shard_id, RGWGetBucketStats_CB *ctx)
+  {
+    return realBucket->read_stats_async(dpp, shard_id, ctx);
+  }
+
+  int TracerBucket::sync_user_stats(const DoutPrefixProvider *dpp, optional_yield y)
+  {
+    return realBucket->sync_user_stats(dpp,y);
+  }
+
+  int TracerBucket::update_container_stats(const DoutPrefixProvider *dpp)
+  {
+    return realBucket->update_container_stats(dpp);
+  }
+
+  int TracerBucket::check_bucket_shards(const DoutPrefixProvider *dpp)
+  {
+    return realBucket->check_bucket_shards(dpp);
+  }
+
+  int TracerBucket::chown(const DoutPrefixProvider *dpp, User* new_user, User* old_user, optional_yield y, const std::string* marker)
+  {
+    return realBucket->chown(dpp, new_user, old_user, y, marker);
+  }
+
+  int TracerBucket::put_info(const DoutPrefixProvider *dpp, bool exclusive, ceph::real_time _mtime)
+  {
+    return realBucket->put_info(dpp, exclusive, _mtime);
+
+  }
+
+  /* Make sure to call get_bucket_info() if you need it first */
+  bool TracerBucket::is_owner(User* user)
+  {
+    return realBucket->is_owner(user);
+  }
+
+  int TracerBucket::check_empty(const DoutPrefixProvider *dpp, optional_yield y)
+  {
+    /* XXX: Check if bucket contains any objects */
+    return realBucket->check_empty(dpp, y);
+  }
+
+  int TracerBucket::check_quota(const DoutPrefixProvider *dpp, RGWQuotaInfo& user_quota, RGWQuotaInfo& bucket_quota, uint64_t obj_size,
+      optional_yield y, bool check_size_only)
+  {
+    /* Not Handled in the first pass as stats are also needed */
+    return realBucket->check_quota(dpp, user_quota, bucket_quota, obj_size, y, check_size_only);
+  }
+
+  int TracerBucket::merge_and_store_attrs(const DoutPrefixProvider *dpp, Attrs& new_attrs, optional_yield y)
+  {
+    return realBucket->merge_and_store_attrs(dpp, new_attrs, y);
+  }
+
+  int TracerBucket::try_refresh_info(const DoutPrefixProvider *dpp, ceph::real_time *pmtime)
+  {
+    return realBucket->try_refresh_info(dpp, pmtime);
+  }
+
+  /* XXX: usage and stats not supported in the first pass */
+  int TracerBucket::read_usage(const DoutPrefixProvider *dpp, uint64_t start_epoch, uint64_t end_epoch,
+      uint32_t max_entries, bool *is_truncated,
+      RGWUsageIter& usage_iter,
+      map<rgw_user_bucket, rgw_usage_log_entry>& usage)
+  {
+    return realBucket->read_usage(dpp, start_epoch, end_epoch, max_entries, is_truncated, usage_iter, usage);
+  }
+
+  int TracerBucket::trim_usage(const DoutPrefixProvider *dpp, uint64_t start_epoch, uint64_t end_epoch)
+  {
+    return realBucket->trim_usage(dpp, start_epoch, end_epoch);
+  }
+
+  int TracerBucket::remove_objs_from_index(const DoutPrefixProvider *dpp, std::list<rgw_obj_index_key>& objs_to_unlink)
+  { 
+    /*
+     * Delete all the object in the list from the object table of this
+     * bucket
+     */
+    return realBucket->remove_objs_from_index(dpp, objs_to_unlink);
+  }
+
+  int TracerBucket::check_index(const DoutPrefixProvider *dpp, std::map<RGWObjCategory, RGWStorageStats>& existing_stats, std::map<RGWObjCategory, RGWStorageStats>& calculated_stats)
+  {
+    /* XXX: stats not supported yet */
+    return realBucket->check_index(dpp, existing_stats,calculated_stats);
+  }
+
+  int TracerBucket::rebuild_index(const DoutPrefixProvider *dpp)
+  {
+    return realBucket->rebuild_index(dpp);
+  }
+
+  int TracerBucket::set_tag_timeout(const DoutPrefixProvider *dpp, uint64_t timeout)
+  {
+    /* XXX: CHECK: set tag timeout for all the bucket objects? */
+    return realBucket->set_tag_timeout(dpp, timeout);
+  }
+
+  int TracerBucket::purge_instance(const DoutPrefixProvider *dpp)
+  {
+    /* XXX: CHECK: for dbstore only single instance supported.
+     * Remove all the objects for that instance? Anything extra needed?
+     */
+    return realBucket->purge_instance(dpp);
+  }
+
+  std::unique_ptr<MultipartUpload> TracerBucket::get_multipart_upload(
+				const std::string& oid,
+				std::optional<std::string> upload_id,
+				ACLOwner owner, ceph::real_time mtime) {
+          /* TODO: reimplement this once TracerMultipartUploads are complete
+    return std::make_unique<TracerMultipartUpload>(this->trace, this, oid, upload_id,
+						std::move(owner), mtime);
+            */
+            return realBucket->get_multipart_upload(oid, upload_id, owner, mtime);
+  }
+
+  int TracerBucket::list_multiparts(const DoutPrefixProvider *dpp,
+				const string& prefix,
+				string& marker,
+				const string& delim,
+				const int& max_uploads,
+				vector<std::unique_ptr<MultipartUpload>>& uploads,
+				map<string, bool> *common_prefixes,
+				bool *is_truncated) {
+    return realBucket->list_multiparts(dpp, prefix, marker, delim, max_uploads, uploads, common_prefixes, is_truncated);
+  }
+
+  int TracerBucket::abort_multiparts(const DoutPrefixProvider* dpp,
+				 CephContext* cct) {
+    return realBucket->abort_multiparts(dpp, cct);
+  }
+
   /*Tracer Driver functions */
 
   std::unique_ptr<User> TracerDriver::get_user(const rgw_user &u)
