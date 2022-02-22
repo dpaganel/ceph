@@ -66,6 +66,220 @@ using namespace std;
 namespace rgw::sal {
 
     /*user functions*/
+
+    int TObject::delete_object(const DoutPrefixProvider* dpp, RGWObjectCtx* obj_ctx, optional_yield y, bool prevent_versioning)
+  {
+    ldpp_dout(dpp, 20) << "TRACER: Unimplemented function" << dendl;
+    return -1; //implement - Dan P
+  }
+
+  int TObject::delete_obj_aio(const DoutPrefixProvider* dpp, RGWObjState* astate,
+      Completions* aio, bool keep_index_consistent,
+      optional_yield y)
+  {
+    /* XXX: Make it async */
+    ldpp_dout(dpp, 20) << "TRACER: Unimplemented function" << dendl;
+    return -1; // implement - Dan P
+  }
+
+  int TObject::copy_object(RGWObjectCtx& obj_ctx,
+      User* user,
+      req_info* info,
+      const rgw_zone_id& source_zone,
+      rgw::sal::Object* dest_object,
+      rgw::sal::Bucket* dest_bucket,
+      rgw::sal::Bucket* src_bucket,
+      const rgw_placement_rule& dest_placement,
+      ceph::real_time* src_mtime,
+      ceph::real_time* mtime,
+      const ceph::real_time* mod_ptr,
+      const ceph::real_time* unmod_ptr,
+      bool high_precision_time,
+      const char* if_match,
+      const char* if_nomatch,
+      AttrsMod attrs_mod,
+      bool copy_if_newer,
+      Attrs& attrs,
+      RGWObjCategory category,
+      uint64_t olh_epoch,
+      boost::optional<ceph::real_time> delete_at,
+      std::string* version_id,
+      std::string* tag,
+      std::string* etag,
+      void (*progress_cb)(off_t, void *),
+      void* progress_data,
+      const DoutPrefixProvider* dpp,
+      optional_yield y)
+  {
+    ldpp_dout(dpp, 20) << "TRACER: Unimplemented function" << dendl;
+        return -1; // implement - Dan P
+  }
+
+  /* RGWObjectCtx will be moved out of sal */
+  /* XXX: Placeholder. Should not be needed later after Dan's patch */
+  void TObject::set_atomic(RGWObjectCtx* rctx) const
+  {
+    dout(20) << "TRACER: Unimplemented function" << dendl;
+    return; //implement - Dan P
+  }
+
+  /* RGWObjectCtx will be moved out of sal */
+  /* XXX: Placeholder. Should not be needed later after Dan's patch */
+  void TObject::set_prefetch_data(RGWObjectCtx* rctx)
+  {
+    dout(20) << "TRACER: Unimplemented function" << dendl;
+    return; //implement - Dan P
+  }
+
+  /* RGWObjectCtx will be moved out of sal */
+  /* XXX: Placeholder. Should not be needed later after Dan's patch */
+  void TObject::set_compressed(RGWObjectCtx* rctx)
+  {
+    dout(20) << "TRACER: Unimplemented function" << dendl;
+    return; //implement - Dan P
+  }
+
+      int TObject::get_obj_state(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, RGWObjState **state, optional_yield y, bool follow_olh)
+    {
+      ldpp_dout(dpp, 20) << "TRACER: Unimplemented function" << dendl;
+      return -1; // implement - Dan P
+    }
+
+int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, Attrs* setattrs, Attrs* delattrs, optional_yield y, rgw_obj* target_obj)
+  {
+    ldpp_dout(dpp, 20) << "TRACER: Unimplemented function" << dendl;
+    return -1; // implement - Dan P
+  }
+
+  int TObject::get_obj_attrs(RGWObjectCtx* rctx, optional_yield y, const DoutPrefixProvider* dpp, rgw_obj* target_obj)
+  {
+    ldpp_dout(dpp, 20) << "TRACER: Unimplemented function" << dendl;
+    return -1; // implement - Dan P
+  }
+
+  int TObject::modify_obj_attrs(RGWObjectCtx* rctx, const char* attr_name, bufferlist& attr_val, optional_yield y, const DoutPrefixProvider* dpp)
+  {
+    ldpp_dout(dpp, 20) << "TRACER: Unimplemented function" << dendl;
+    return -1; // implement - Dan P
+  }
+
+  int TObject::delete_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, const char* attr_name, optional_yield y)
+  {
+    ldpp_dout(dpp, 20) << "TRACER: Unimplemented function" << dendl;
+    return -1; // implement - Dan P
+  }
+
+  bool TObject::is_expired() {
+    dout(20) << "TRACER: Unimplemented function" << dendl;
+    return false; //implement - Dan P
+  }
+
+  void TObject::gen_rand_obj_instance_name()
+  {
+    dout(20) << "TRACER: pure passthrough function: gen_rand_obj_instance_name " << dendl;
+     return realObject->gen_rand_obj_instance_name(); //Implement? - Dan P
+  }
+
+  MPSerializer* TObject::get_serializer(const DoutPrefixProvider *dpp, const std::string& lock_name)
+  {
+    ldpp_dout(dpp, 20) << "TRACER: pure passthrough function: get_serializer" << dendl;
+    return new MPTSerializer(dpp, trace, this, lock_name); //Implement - Dan P
+  }
+
+  int TObject::transition(RGWObjectCtx& rctx,
+      Bucket* bucket,
+      const rgw_placement_rule& placement_rule,
+      const real_time& mtime,
+      uint64_t olh_epoch,
+      const DoutPrefixProvider* dpp,
+      optional_yield y)
+  {
+    ldpp_dout(dpp, 20) << "TRACER: pure passthrough function: transition" << dendl;
+    return realObject->transition(rctx, bucket, placement_rule, mtime, olh_epoch, dpp, y);
+  }
+
+  bool TObject::placement_rules_match(rgw_placement_rule& r1, rgw_placement_rule& r2)
+  {
+    dout(20) << "TRACER: pure passthrough function: placement_rules_match " << dendl;
+    /* XXX: support single default zone and zonegroup for now */
+    return realObject->placement_rules_match(r1, r2);
+  }
+
+  int TObject::dump_obj_layout(const DoutPrefixProvider *dpp, optional_yield y, Formatter* f, RGWObjectCtx* obj_ctx)
+  {
+    ldpp_dout(dpp, 20) << "TRACER: pure passthrough function: dump_obj_layout" << dendl;
+    return realObject->dump_obj_layout(dpp, y, f, obj_ctx);
+  }
+
+  int TObject::swift_versioning_restore(RGWObjectCtx* obj_ctx,
+      bool& restored,
+      const DoutPrefixProvider* dpp)
+  {
+    ldpp_dout(dpp, 20) << "TRACER: pure passthrough function: swift_versioning_restore" << dendl;
+    return realObject->swift_versioning_restore(obj_ctx, restored, dpp);
+  }
+
+  int TObject::swift_versioning_copy(RGWObjectCtx* obj_ctx,
+      const DoutPrefixProvider* dpp,
+      optional_yield y)
+  {
+    ldpp_dout(dpp, 20) << "TRACER: pure passthrough function: swift_versioning_copy" << dendl;
+    //This causes segfaults?
+    //return realObject->swift_versioning_copy(obj_ctx, dpp, y);
+    return 0;
+  }
+
+  std::unique_ptr<Object::ReadOp> TObject::get_read_op(RGWObjectCtx* ctx)
+  {
+    dout(20) << "TRACER: making ReadOp" << dendl;
+    return std::make_unique<TObject::TReadOp>(this, ctx); // Implement - Dan P
+  }
+
+  TObject::TReadOp::TReadOp(TObject *_source, RGWObjectCtx *_rctx) : //Implement - Dan P
+    source(_source),
+    rctx(_rctx)    /*op_target(_source->store->getDB(),
+        _source->get_bucket()->get_info(),
+        _source->get_obj()),
+    parent_op(&op_target)*/ //Implement - Dan P
+  { }
+  
+  std::unique_ptr<Object::DeleteOp> TObject::get_delete_op(RGWObjectCtx* ctx)
+  {
+    return NULL; //std::make_unique<TObject::TDeleteOp>(this, ctx); //Implement - Dan P - This straight up isn't compiling and I don't know why
+  }
+  
+  int TObject::omap_get_vals(const DoutPrefixProvider *dpp, const std::string& marker, uint64_t count,
+      std::map<std::string, bufferlist> *m,
+      bool* pmore, optional_yield y)
+  {
+    ldpp_dout(dpp, 20) << "TRACER: Unimplemented function: omap_get_vals" << dendl;
+    return -1; // implement - Dan P
+  }
+
+  int TObject::omap_get_all(const DoutPrefixProvider *dpp, std::map<std::string, bufferlist> *m,
+      optional_yield y)
+  {
+    ldpp_dout(dpp, 20) << "TRACER: Unimplemented function: omap_get_all" << dendl;
+    return -1; // implement - Dan P
+  }
+
+  int TObject::omap_get_vals_by_keys(const DoutPrefixProvider *dpp, const std::string& oid,
+      const std::set<std::string>& keys,
+      Attrs* vals)
+  {
+    ldpp_dout(dpp, 20) << "TRACER: Unimplemented function: omap_get_vals_by_keys" << dendl;
+    return -1; // implement - Dan P
+  }
+
+  int TObject::omap_set_val_by_key(const DoutPrefixProvider *dpp, const std::string& key, bufferlist& val,
+      bool must_exist, optional_yield y)
+  {
+    ldpp_dout(dpp, 20) << "TRACER: Unimplemented function: omap_set_val_by_key" << dendl;
+    return -1; // implement - Dan P
+  }
+
+  /*Tracer User Functions*/
+
     int TracerUser::remove_user(const DoutPrefixProvider* dpp, optional_yield y)
     {
        ldpp_dout(dpp, 20) << "TRACER:USER: recieved operation: remove_user" << dendl;
@@ -74,15 +288,15 @@ namespace rgw::sal {
     int TracerUser::load_user(const DoutPrefixProvider *dpp, optional_yield y)
     {
       ldpp_dout(dpp, 20) << "TRACER:USER: recieved operation: load_user" << dendl;
-        return realUser->load_user(dpp, y);
+        return realUser->load_user(dpp, y); //implement - Dan P
     }
     int TracerUser::store_user(const DoutPrefixProvider* dpp, optional_yield y, bool exclusive, RGWUserInfo* old_info)
     {
       ldpp_dout(dpp, 20) << "TRACER:USER: recieved operation: store_user" << dendl;
-        return realUser->store_user(dpp, y, exclusive, old_info);
+        return realUser->store_user(dpp, y, exclusive, old_info); //implement - Dan P
     }
 
-    int TracerUser::create_bucket(const DoutPrefixProvider* dpp,
+    int TracerUser::create_bucket(const DoutPrefixProvider* dpp, //we need to alter this so it makes a TracerBucket that has a real bucket in it - Dan P
           const rgw_bucket& b,
           const std::string& zonegroup_id,
           rgw_placement_rule& placement_rule,
@@ -100,11 +314,11 @@ namespace rgw::sal {
           optional_yield y)
     {
         
-        ldpp_dout(dpp, 20) << "TRACER:USER: recieved operation: create_bucket" << dendl;
+        ldpp_dout(dpp, 20) << "TRACER: USER: recieved operation: create_bucket" << dendl;
         int r;
         r = realUser->create_bucket(dpp, b, zonegroup_id, placement_rule, swift_ver_location, pquota_info, policy,
                 attrs, info, ep_objv, exclusive, obj_lock_enabled, existed, req_info, bucket, y);
-        ldpp_dout(dpp, 20) << "TRACER:USER: Primary store recieved and carried out operation: create bucket" << dendl;
+        ldpp_dout(dpp, 20) << "TRACER: USER: Primary store recieved and carried out operation: create bucket" << dendl;
         return r;
     }
 
@@ -112,13 +326,13 @@ namespace rgw::sal {
 			       const std::string& end_marker, uint64_t max, bool need_stats,
 			       BucketList &buckets, optional_yield y)
     {
-        return realUser->list_buckets(dpp, marker, end_marker, max, need_stats, buckets, y);
+        return realUser->list_buckets(dpp, marker, end_marker, max, need_stats, buckets, y); //implement - Dan P
     }
 
 
     int TracerUser::read_attrs(const DoutPrefixProvider* dpp, optional_yield y)
     {
-        return realUser->read_attrs(dpp, y);
+        return realUser->read_attrs(dpp, y); //implement - Dan P
     }
     
     int TracerUser::read_stats(const DoutPrefixProvider *dpp,
@@ -126,34 +340,71 @@ namespace rgw::sal {
         ceph::real_time *last_stats_sync,
         ceph::real_time *last_stats_update)
     {
-            return realUser->read_stats(dpp, y, stats, last_stats_sync, last_stats_update);
+            return realUser->read_stats(dpp, y, stats, last_stats_sync, last_stats_update); //implement - Dan P
     }
 
     int TracerUser::read_stats_async(const DoutPrefixProvider *dpp, RGWGetUserStats_CB *cb)
     {
-      return realUser->read_stats_async(dpp, cb);
+      return realUser->read_stats_async(dpp, cb); //implement - Dan P
     }
 
     int TracerUser::merge_and_store_attrs(const DoutPrefixProvider* dpp, Attrs& new_attrs, optional_yield y)
     {
-        return realUser->merge_and_store_attrs(dpp, new_attrs, y);
+        return realUser->merge_and_store_attrs(dpp, new_attrs, y); //implement - Dan P
     }
 
     int TracerUser::complete_flush_stats(const DoutPrefixProvider *dpp, optional_yield y)
     {
-        return realUser->complete_flush_stats(dpp, y);
+        return realUser->complete_flush_stats(dpp, y); //implement - Dan P
     }
 
     int TracerUser::read_usage(const DoutPrefixProvider *dpp, uint64_t start_epoch, uint64_t end_epoch, uint32_t max_entries,
     bool *is_truncated, RGWUsageIter& usage_iter,
     map<rgw_user_bucket, rgw_usage_log_entry>& usage)
     {
-        return realUser->read_usage(dpp, start_epoch, end_epoch, max_entries, is_truncated, usage_iter, usage);
+        return realUser->read_usage(dpp, start_epoch, end_epoch, max_entries, is_truncated, usage_iter, usage); //implement - Dan P
     }
 
   int TracerUser::trim_usage(const DoutPrefixProvider *dpp, uint64_t start_epoch, uint64_t end_epoch)
   {
-    return realUser->trim_usage(dpp, start_epoch, end_epoch);
+    return realUser->trim_usage(dpp, start_epoch, end_epoch); //implement - Dan P
+  }
+
+
+ /*ReadOp functions*/
+  int TObject::TReadOp::prepare(optional_yield y, const DoutPrefixProvider* dpp)
+  {
+    ldpp_dout(dpp, 20) << "TRACER: Unimplemented function: prepare" << dendl;
+    return -1; // implement - Dan P
+  }
+
+  int TObject::TReadOp::read(int64_t ofs, int64_t end, bufferlist& bl, optional_yield y, const DoutPrefixProvider* dpp)
+  {
+    ldpp_dout(dpp, 20) << "TRACER: Unimplemented function: read" << dendl;
+    return -1; // implement - Dan P
+    //return parent_op.read(ofs, end, bl, dpp);
+  }
+
+  int TObject::TReadOp::get_attr(const DoutPrefixProvider* dpp, const char* name, bufferlist& dest, optional_yield y)
+  {
+    ldpp_dout(dpp, 20) << "TRACER: Unimplemented function: get_attr" << dendl;
+    return -1; // implement - Dan P
+    //return parent_op.get_attr(dpp, name, dest);
+  }
+
+  int TObject::TReadOp::iterate(const DoutPrefixProvider* dpp, int64_t ofs, int64_t end, RGWGetDataCB* cb, optional_yield y)
+  {
+    ldpp_dout(dpp, 20) << "TRACER: Unimplemented function: iterate" << dendl;
+    return -1; // implement - Dan P
+    //return parent_op.iterate(dpp, ofs, end, cb);
+  }
+
+ /*DeleteOp functions*/
+
+  int TObject::TDeleteOp::delete_obj(const DoutPrefixProvider* dpp, optional_yield y)
+  {
+    ldpp_dout(dpp, 20) << "TRACER: Unimplemented function: delete_obj" << dendl;
+    return -1; // implement - Dan P
   }
 
  /*Zonegroup functions */
@@ -211,22 +462,27 @@ namespace rgw::sal {
 
   std::unique_ptr<Object> TracerBucket::get_object(const rgw_obj_key& k)
   {
-    /* TODO: reimplement when TObjects are complete
+    /* TODO: reimplement when TObjects are complete */
     return std::make_unique<TObject>(this->trace, k, this);
-    */
+    
+    dout(20) << "TRACER: BUCKET: Intercepted operation: get_object" << dendl;
     return realBucket->get_object(k);
   }
 
   int TracerBucket::list(const DoutPrefixProvider *dpp, ListParams& params, int max, ListResults& results, optional_yield y)
   {
-    return realBucket->list(dpp, params, max, results, y);
+    ldpp_dout(dpp, 20) << "TRACER: BUCKET: recieved operation: list" << dendl;
+    int ret;
+    ret = realBucket->list(dpp, params, max, results, y);
+    ldpp_dout(dpp, 20) << "TRACER: BUCKET: returned from operation: list" << dendl;
+    return ret;
   }
 
   /*This particular function needs more fleshing out*/
   int TracerBucket::remove_bucket(const DoutPrefixProvider *dpp, bool delete_children, bool forward_to_master, req_info* req_info, optional_yield y)
   {
     int ret;
-
+    ldpp_dout(dpp, 20) << "TRACER: BUCKET: recieved operation: remove_bucket" << dendl;
     ret = load_bucket(dpp, y);
     if (ret < 0)
       return ret;
@@ -259,8 +515,8 @@ namespace rgw::sal {
       }
     }
 
-    //ret = store->getDB()->remove_bucket(dpp, info);
-
+    ret = realBucket->remove_bucket(dpp, delete_children,forward_to_master, req_info, y);
+    ldpp_dout(dpp, 20) << "TRACER:BUCKET: returned from operation: remove_bucket" << dendl;
     return ret;
   }
 
@@ -268,12 +524,16 @@ namespace rgw::sal {
 					keep_index_consistent,
 					optional_yield y, const
 					DoutPrefixProvider *dpp) {
-    return realBucket->remove_bucket_bypass_gc(concurrent_max, keep_index_consistent, y, dpp);
+    ldpp_dout(dpp, 20) << "TRACER: BUCKET: recieved operation: remove_bucket_bypass_gc " << dendl; 
+    int ret;       
+    ret = realBucket->remove_bucket_bypass_gc(concurrent_max, keep_index_consistent, y, dpp);
+    ldpp_dout(dpp, 20) << "TRACER: BUCKET: returned from operation: remove_bucket_bypass_gc " << dendl;
+    return ret;
   }
 
   int TracerBucket::set_acl(const DoutPrefixProvider *dpp, RGWAccessControlPolicy &acl, optional_yield y)
   {
-    /*
+    ldpp_dout(dpp, 20) << "TRACER: BUCKET: recieved operation: set_acl " << dendl;
     int ret = 0;
     bufferlist aclbl;
 
@@ -283,16 +543,20 @@ namespace rgw::sal {
     Attrs attrs = get_attrs();
     attrs[RGW_ATTR_ACL] = aclbl;
 
-    ret = store->getDB()->update_bucket(dpp, "attrs", info, false, &(acl.get_owner().get_id()), &attrs, nullptr, nullptr);
+    
+    ret = realBucket->set_acl(dpp, acl, y);
 
+    ldpp_dout(dpp, 20) << "TRACER: BUCKET: returned from operation: set_acl "<< dendl;
     return ret;
-    */
-    return realBucket->set_acl(dpp, acl, y);
   }
 
   int TracerBucket::load_bucket(const DoutPrefixProvider *dpp, optional_yield y, bool get_stats)
   {
-    return realBucket->load_bucket(dpp, y, get_stats);
+    ldpp_dout(dpp, 20) << "TRACER: BUCKET: recieved operation: load_bucket "<< dendl;
+    int ret = 0;
+    //ret = realBucket->load_bucket(dpp, y, get_stats);
+    ldpp_dout(dpp, 20) << "TRACER: BUCKET: returned from operation: load_bucket "<< dendl;
+    return ret;
   }
 
     int TracerBucket::read_stats(const DoutPrefixProvider *dpp, int shard_id,
@@ -300,12 +564,20 @@ namespace rgw::sal {
       std::map<RGWObjCategory, RGWStorageStats>& stats,
       std::string *max_marker, bool *syncstopped)
   {
-    return realBucket->read_stats(dpp, shard_id, bucket_ver, master_ver, stats, max_marker, syncstopped);
+    ldpp_dout(dpp, 20) << "TRACER: BUCKET: recieved operation: read_stats"<< dendl;
+    int ret;
+    ret = realBucket->read_stats(dpp, shard_id, bucket_ver, master_ver, stats, max_marker, syncstopped);
+    ldpp_dout(dpp, 20) << "TRACER: BUCKET: returned from operation: read_stats"<< dendl;
+    return ret;
   }
 
   int TracerBucket::read_stats_async(const DoutPrefixProvider *dpp, int shard_id, RGWGetBucketStats_CB *ctx)
   {
-    return realBucket->read_stats_async(dpp, shard_id, ctx);
+    ldpp_dout(dpp, 20) << "TRACER: BUCKET: recieved operation: read_stats_async "<< dendl;
+    int ret;
+    ret = realBucket->read_stats_async(dpp, shard_id, ctx);
+    ldpp_dout(dpp, 20) << "TRACER: BUCKET: returned from operation: read_stats_async "<< dendl;
+    return ret;
   }
 
   int TracerBucket::sync_user_stats(const DoutPrefixProvider *dpp, optional_yield y)
@@ -496,7 +768,9 @@ namespace rgw::sal {
   std::unique_ptr<Object> TracerDriver::get_object(const rgw_obj_key& k)
   {
     dout(20) << "TRACER: recieved operation: get_object" << dendl;
-    return realStore->get_object(k);
+    return std::make_unique<TObject>(this, k);
+    
+    //return realStore->get_object(k);
   }
 
    int TracerDriver::get_bucket(const DoutPrefixProvider *dpp, User* u, const rgw_bucket& b, std::unique_ptr<Bucket>* bucket, optional_yield y)
@@ -506,36 +780,56 @@ namespace rgw::sal {
     
     dout(20) << "TRACER: intercepting operation: get_bucket type 1, from store: " << this->get_name() << dendl;
     std::unique_ptr<Bucket> * storeBucket = std::move(bucket);
+    //bucket->reset(storeBucket);
     ret = realStore->get_bucket(dpp, u, b, storeBucket, y);
+
+    dout(20) << "TRACER: get_bucket type 1: returned from realBucket get/load " << this->get_name() << dendl;
 
     if (ret < 0)
       return ret;
 
-    bp = new TracerBucket(this, storeBucket->get()->get_info(), storeBucket);
-    
+    bp = new TracerBucket(this, /*storeBucket->get()->*/storeBucket->get()->get_info(), storeBucket);
+    ret = bp->load_bucket(dpp, y);
+    if (ret < 0)
+    {
+      delete bp;
+      return ret;
+    }
+
     if (!bp)
       return -ENOMEM;
 
     
     bucket->reset(bp);
-    dout(20) << "TRACER: Returned from get_bucket" << dendl;
+    dout(20) << "TRACER: Returned from get_bucket type 1" << dendl;
     return ret;
   }
 
   int TracerDriver::get_bucket(User* u, const RGWBucketInfo& i, std::unique_ptr<Bucket>* bucket)
   {
-    int ret;
+    
     dout(20) << "TRACER: intercepting operation: get_bucket type 2, from store: " << this->get_name() << dendl;
-    ret = realStore->get_bucket(u, i, bucket);
-    dout(20) << "TRACER: Returned from get_bucket" << dendl;
-    return ret;
+    Bucket * bp;
+    bp = new TracerBucket(this, i, u);
+    bucket->reset(bp);
+    dout(20) << "TRACER: Returned from get_bucket type 2" << dendl;
+    return 0;
   }
 
   int TracerDriver::get_bucket(const DoutPrefixProvider *dpp, User* u, const std::string& tenant, const std::string& name, std::unique_ptr<Bucket>* bucket, optional_yield y)
   {
-    int ret;
+    
     dout(20) << "TRACER: intercepting operation: get_bucket type 3, from store: " << this->get_name() << dendl;
-    ret = realStore->get_bucket(dpp, u, tenant, name, std::move(bucket), y);
+
+    int ret;
+
+    rgw_bucket b;
+    b.tenant = tenant;
+    b.name = name;
+
+    ret = get_bucket(dpp, u, b, bucket, y);
+
+    ldpp_dout(dpp,20) << "TRACER: returned operation: get_bucket type 3, from store: " << this->get_name() << dendl;
     return ret;
   }
 

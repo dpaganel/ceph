@@ -193,11 +193,13 @@ class TracerUser : public User {
       
 
     public:
-    
+      
       TracerBucket(TracerBucket &_b, std::unique_ptr<Bucket> _rb) 
-      : realBucket(std::move(_rb)) 
+      : trace(_b.trace),
+        acls(), 
+        realBucket(std::move(_rb)) 
       {}
-
+      
       TracerBucket(TracerDriver *_st)
         : trace(_st),
         acls() {
@@ -227,7 +229,7 @@ class TracerUser : public User {
         acls() {
         }
 
-        TracerBucket(TracerDriver *_st, const RGWBucketInfo& _i, std::unique_ptr<Bucket> * _rb)
+        TracerBucket(TracerDriver *_st, const RGWBucketInfo& _i, std::unique_ptr<Bucket> * _rb, acl _acl)
         : Bucket(_i),
         trace(_st),
         acls(),
@@ -237,7 +239,7 @@ class TracerUser : public User {
       TracerBucket(TracerDriver *_st, const rgw_bucket& _b, User* _u)
         : Bucket(_b, _u),
         trace(_st),
-        acls()
+        acls(_acl)
         {
         }
 
@@ -483,6 +485,7 @@ class TracerUser : public User {
 
     class TObject : public Object {
     private:
+      std::unique_ptr<Object> realObject;
       TracerDriver* trace;
       RGWAccessControlPolicy acls;
       /* XXX: to be removed. Till Dan's patch comes, a placeholder
@@ -493,10 +496,11 @@ class TracerUser : public User {
     public:
       struct TReadOp : public ReadOp {
         private:
+          ReadOp* realReadOp;
           TObject* source;
           RGWObjectCtx* rctx;
-          DB::Object op_target;
-          DB::Object::Read parent_op; //leaving the DB:: here because it won't compile otherwise
+          //DB::Object op_target;
+          //DB::Object::Read parent_op; //leaving the DB:: here because it won't compile otherwise
 
         public:
           TReadOp(TObject *_source, RGWObjectCtx *_rctx);
@@ -509,10 +513,11 @@ class TracerUser : public User {
 
       struct TDeleteOp : public DeleteOp {
         private:
+          DeleteOp* realDeleteOp;
           TObject* source;
           RGWObjectCtx* rctx;
-          DB::Object op_target;
-          DB::Object::Delete parent_op;
+          //DB::Object op_target;
+          //DB::Object::Delete parent_op;
 
         public:
           TDeleteOp(TObject* _source, RGWObjectCtx* _rctx);
@@ -531,6 +536,11 @@ class TracerUser : public User {
         : Object(_k, _b),
         trace(_st),
         acls() {}
+
+      TObject(TObject &_o, std::unique_ptr<Object> _ro)
+      : realObject(std::move(_ro)){}
+
+        /*TODO: implement new constructor that takes a real object in - Dan P*/
 
       TObject(TObject& _o) = default;
 
@@ -569,8 +579,9 @@ class TracerUser : public User {
       virtual bool is_expired() override;
       virtual void gen_rand_obj_instance_name() override;
       virtual std::unique_ptr<Object> clone() override {
-        return std::unique_ptr<Object>(new TObject(*this));
+        return std::unique_ptr<Object>(new TObject(*this, std::move(this->realObject)));
       }
+
       virtual MPSerializer* get_serializer(const DoutPrefixProvider *dpp, const std::string& lock_name) override;
       virtual int transition(RGWObjectCtx& rctx,
           Bucket* bucket,
