@@ -775,20 +775,24 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
 
    int TracerDriver::get_bucket(const DoutPrefixProvider *dpp, User* u, const rgw_bucket& b, std::unique_ptr<Bucket>* bucket, optional_yield y)
   {
+    dout(20) << "TRACER: performing passthrough function: get_bucket type 1, from store: " << this->get_name() << dendl;
+    return realStore->get_bucket(dpp, u, b, std::move(bucket), y);
     int ret;
-    Bucket * bp;
+    //Bucket * bp;
     
     dout(20) << "TRACER: intercepting operation: get_bucket type 1, from store: " << this->get_name() << dendl;
-    std::unique_ptr<Bucket> * storeBucket = std::move(bucket);
-    //bucket->reset(storeBucket);
-    ret = realStore->get_bucket(dpp, u, b, storeBucket, y);
+
+    TracerBucket * bp = new TracerBucket(this);
+    //std::unique_ptr<Bucket> * storeBucket;// = std::move(bucket);
+    
+    ret = realStore->get_bucket(dpp, u, b, &bp->realBucket, y);
 
     dout(20) << "TRACER: get_bucket type 1: returned from realBucket get/load " << this->get_name() << dendl;
 
     if (ret < 0)
       return ret;
 
-    bp = new TracerBucket(this, /*storeBucket->get()->*/storeBucket->get()->get_info(), storeBucket);
+    //bp = new TracerBucket(this, /*storeBucket->get()->*/std::move(storeBucket), storeBucket);
     ret = bp->load_bucket(dpp, y);
     if (ret < 0)
     {
@@ -807,7 +811,9 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
 
   int TracerDriver::get_bucket(User* u, const RGWBucketInfo& i, std::unique_ptr<Bucket>* bucket)
   {
-    
+    dout(20) << "TRACER: performing passthrough function: get_bucket type 2, from store: " << this->get_name() << dendl;
+    return realStore->get_bucket(u, i, std::move(bucket));
+
     dout(20) << "TRACER: intercepting operation: get_bucket type 2, from store: " << this->get_name() << dendl;
     Bucket * bp;
     bp = new TracerBucket(this, i, u);
@@ -818,7 +824,8 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
 
   int TracerDriver::get_bucket(const DoutPrefixProvider *dpp, User* u, const std::string& tenant, const std::string& name, std::unique_ptr<Bucket>* bucket, optional_yield y)
   {
-    
+    dout(20) << "TRACER: performing passthrough function: get_bucket type 3, from store: " << this->get_name() << dendl;
+    return realStore->get_bucket(dpp, u, tenant, name, std::move(bucket), y);
     dout(20) << "TRACER: intercepting operation: get_bucket type 3, from store: " << this->get_name() << dendl;
 
     int ret;

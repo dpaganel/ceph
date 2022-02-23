@@ -229,7 +229,7 @@ class TracerUser : public User {
         acls() {
         }
 
-        TracerBucket(TracerDriver *_st, const RGWBucketInfo& _i, std::unique_ptr<Bucket> * _rb, acl _acl)
+        TracerBucket(TracerDriver *_st, const RGWBucketInfo& _i, std::unique_ptr<Bucket> * _rb)
         : Bucket(_i),
         trace(_st),
         acls(),
@@ -239,7 +239,7 @@ class TracerUser : public User {
       TracerBucket(TracerDriver *_st, const rgw_bucket& _b, User* _u)
         : Bucket(_b, _u),
         trace(_st),
-        acls(_acl)
+        acls()
         {
         }
 
