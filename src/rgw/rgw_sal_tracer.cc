@@ -194,7 +194,8 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
       const DoutPrefixProvider* dpp,
       optional_yield y)
   {
-    ldpp_dout(dpp, 20) << "TRACER: pure passthrough function: transition" << dendl;
+    //dout(20) << "TRACER: making ReadOp" << dendl;
+    //ldpp_dout(dpp, 20) << "TRACER: pure passthrough function: transition" << dendl;
     return realObject->transition(rctx, bucket, placement_rule, mtime, olh_epoch, dpp, y);
   }
 
@@ -241,7 +242,10 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
         _source->get_bucket()->get_info(),
         _source->get_obj()),
     parent_op(&op_target)*/ //Implement - Dan P
-  { }
+  { 
+    dout(20) << "TRACER: Unimplemented function: TReadOp" << dendl;
+    //ldpp_dout(dpp, 20) << "TRACER: pure passthrough function: transition" << dendl;
+  }
   
   std::unique_ptr<Object::DeleteOp> TObject::get_delete_op(RGWObjectCtx* ctx)
   {
@@ -326,12 +330,14 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
 			       const std::string& end_marker, uint64_t max, bool need_stats,
 			       BucketList &buckets, optional_yield y)
     {
+        ldpp_dout(dpp, 20) << "TRACER: pure passthrough function: list_buckets" << dendl;
         return realUser->list_buckets(dpp, marker, end_marker, max, need_stats, buckets, y); //implement - Dan P
     }
 
 
     int TracerUser::read_attrs(const DoutPrefixProvider* dpp, optional_yield y)
     {
+        ldpp_dout(dpp, 20) << "TRACER: pure passthrough function: read_attrs" << dendl;
         return realUser->read_attrs(dpp, y); //implement - Dan P
     }
     
@@ -340,21 +346,25 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
         ceph::real_time *last_stats_sync,
         ceph::real_time *last_stats_update)
     {
-            return realUser->read_stats(dpp, y, stats, last_stats_sync, last_stats_update); //implement - Dan P
+        ldpp_dout(dpp, 20) << "TRACER: pure passthrough function: read_stats " << dendl;
+        return realUser->read_stats(dpp, y, stats, last_stats_sync, last_stats_update); //implement - Dan P
     }
 
     int TracerUser::read_stats_async(const DoutPrefixProvider *dpp, RGWGetUserStats_CB *cb)
     {
+      ldpp_dout(dpp, 20) << "TRACER: pure passthrough function: read_stats_async " << dendl;
       return realUser->read_stats_async(dpp, cb); //implement - Dan P
     }
 
     int TracerUser::merge_and_store_attrs(const DoutPrefixProvider* dpp, Attrs& new_attrs, optional_yield y)
     {
+        ldpp_dout(dpp, 20) << "TRACER: pure passthrough function: merge_and_store_attrs " << dendl;
         return realUser->merge_and_store_attrs(dpp, new_attrs, y); //implement - Dan P
     }
 
     int TracerUser::complete_flush_stats(const DoutPrefixProvider *dpp, optional_yield y)
     {
+        ldpp_dout(dpp, 20) << "TRACER: pure passthrough function: complete_flush_stats " << dendl;
         return realUser->complete_flush_stats(dpp, y); //implement - Dan P
     }
 
@@ -362,11 +372,13 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
     bool *is_truncated, RGWUsageIter& usage_iter,
     map<rgw_user_bucket, rgw_usage_log_entry>& usage)
     {
+        ldpp_dout(dpp, 20) << "TRACER: pure passthrough function: read_usage " << dendl;
         return realUser->read_usage(dpp, start_epoch, end_epoch, max_entries, is_truncated, usage_iter, usage); //implement - Dan P
     }
 
   int TracerUser::trim_usage(const DoutPrefixProvider *dpp, uint64_t start_epoch, uint64_t end_epoch)
   {
+    ldpp_dout(dpp, 20) << "TRACER: pure passthrough function: trim_usage " << dendl;
     return realUser->trim_usage(dpp, start_epoch, end_epoch); //implement - Dan P
   }
 
@@ -714,6 +726,9 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
 
   std::unique_ptr<User> TracerDriver::get_user(const rgw_user &u)
   {
+    dout(20) << "TRACER: pass thru operation: get_user" << dendl;
+    return realStore->get_user(u);
+
     dout(20) << "TRACER: intercepted operation: get_user" << dendl;
     std::unique_ptr<User> ret = make_unique<TracerUser>(this, u, std::move(realStore->get_user(u)));
     dout(20) << "TRACER: returned operation: get_user" << dendl;
@@ -722,6 +737,9 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
 
   int TracerDriver::get_user_by_access_key(const DoutPrefixProvider *dpp, const std::string& key, optional_yield y, std::unique_ptr<User>* user)
   {
+    dout(20) << "TRACER: pass thru operation: get_user_by_access_key" << dendl;
+    return realStore->get_user_by_access_key(dpp, key, y, std::move(user));
+
     ldpp_dout(dpp,20) << "TRACER: intercepted operation: get_user_by_access_key, key: " << key << dendl;
 
     //RGWUserInfo uinfo;
@@ -751,17 +769,20 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
 
   int TracerDriver::get_user_by_email(const DoutPrefixProvider *dpp, const std::string& email, optional_yield y, std::unique_ptr<User>* user)
   {
+    ldpp_dout(dpp, 20) << "TRACER: pure passthrough function: get_user_by_email " << dendl;
     return realStore->get_user_by_email(dpp, email, y, user);
   }
 
   int TracerDriver::get_user_by_swift(const DoutPrefixProvider *dpp, const std::string& user_str, optional_yield y, std::unique_ptr<User>* user)
   {
     /* Swift keys and subusers are not supported for now */
+    ldpp_dout(dpp, 20) << "TRACER: pure passthrough function: get_user_by_swift " << dendl;
     return realStore->get_user_by_swift(dpp, user_str, y, user);
   }
 
   std::string TracerDriver::get_cluster_id(const DoutPrefixProvider* dpp,  optional_yield y)
   {
+    ldpp_dout(dpp, 20) << "TRACER: pure passthrough function: get_cluster_id " << dendl;
     return realStore->get_cluster_id(dpp, y); // for instance unique identifier
   }
 
@@ -776,24 +797,25 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
    int TracerDriver::get_bucket(const DoutPrefixProvider *dpp, User* u, const rgw_bucket& b, std::unique_ptr<Bucket>* bucket, optional_yield y)
   {
     dout(20) << "TRACER: performing passthrough function: get_bucket type 1, from store: " << this->get_name() << dendl;
-    return realStore->get_bucket(dpp, u, b, std::move(bucket), y);
+    return realStore->get_bucket(dpp, u, b, bucket, y);
     int ret;
     //Bucket * bp;
     
     dout(20) << "TRACER: intercepting operation: get_bucket type 1, from store: " << this->get_name() << dendl;
 
-    TracerBucket * bp = new TracerBucket(this);
-    //std::unique_ptr<Bucket> * storeBucket;// = std::move(bucket);
+    //TracerBucket * bp = new TracerBucket(this);
+    std::unique_ptr<Bucket> * storeBucket;// = std::move(bucket);
     
-    ret = realStore->get_bucket(dpp, u, b, &bp->realBucket, y);
+    ret = realStore->get_bucket(dpp, u, b, bucket, y);
 
-    dout(20) << "TRACER: get_bucket type 1: returned from realBucket get/load " << this->get_name() << dendl;
+    //dout(20) << "TRACER: get_bucket type 1: returned from realBucket get/load " << this->get_name() << dendl;
 
     if (ret < 0)
       return ret;
 
-    //bp = new TracerBucket(this, /*storeBucket->get()->*/std::move(storeBucket), storeBucket);
-    ret = bp->load_bucket(dpp, y);
+    //Bucket * bp = new TracerBucket(this, b, storeBucket->get()->get_info()/*, u*/);
+    Bucket * bp = new TracerBucket(this, storeBucket->get()->get_info(), std::move(bucket));
+    //ret = bp->load_bucket(dpp, y);
     if (ret < 0)
     {
       delete bp;
@@ -812,7 +834,7 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
   int TracerDriver::get_bucket(User* u, const RGWBucketInfo& i, std::unique_ptr<Bucket>* bucket)
   {
     dout(20) << "TRACER: performing passthrough function: get_bucket type 2, from store: " << this->get_name() << dendl;
-    return realStore->get_bucket(u, i, std::move(bucket));
+    return realStore->get_bucket(u, i, bucket);
 
     dout(20) << "TRACER: intercepting operation: get_bucket type 2, from store: " << this->get_name() << dendl;
     Bucket * bp;
@@ -825,7 +847,7 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
   int TracerDriver::get_bucket(const DoutPrefixProvider *dpp, User* u, const std::string& tenant, const std::string& name, std::unique_ptr<Bucket>* bucket, optional_yield y)
   {
     dout(20) << "TRACER: performing passthrough function: get_bucket type 3, from store: " << this->get_name() << dendl;
-    return realStore->get_bucket(dpp, u, tenant, name, std::move(bucket), y);
+    return realStore->get_bucket(dpp, u, tenant, name, bucket, y);
     dout(20) << "TRACER: intercepting operation: get_bucket type 3, from store: " << this->get_name() << dendl;
 
     int ret;
@@ -850,31 +872,37 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
       JSONParser *jp, req_info& info,
       optional_yield y)
   {
+    ldpp_dout(dpp, 20) << "TRACER: pure passthrough function: forward_request_to)_master " << dendl;
     return realStore->forward_request_to_master(dpp, user, objv, in_data, jp, info, y);
   }
 
     std::string TracerDriver::zone_unique_id(uint64_t unique_num)
   {
+    dout(20) << "TRACER: pure passthrough function: zone_unique_id " << dendl;
     return realStore->zone_unique_id(unique_num);
   }
 
   std::string TracerDriver::zone_unique_trans_id(const uint64_t unique_num)
   {
+    dout(20) << "TRACER: pure passthrough function: zone_unique_trans_id " << dendl;
     return realStore->zone_unique_trans_id(unique_num);
   }
 
   int TracerDriver::cluster_stat(RGWClusterStat& stats)
   {
+    dout(20) << "TRACER: pure passthrough function: read_usage " << dendl;
     return realStore->cluster_stat(stats);
   }
 
   std::unique_ptr<Lifecycle> TracerDriver::get_lifecycle(void)
   {
+    dout(20) << "TRACER: pure passthrough function: get_lifecycle " << dendl;
     return realStore->get_lifecycle();
   }
 
   std::unique_ptr<Completions> TracerDriver::get_completions(void)
   {
+    dout(20) << "TRACER: pure passthrough function: get_completions " << dendl;
     return realStore->get_completions();
   }
   
@@ -882,6 +910,7 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
     rgw::sal::Object* obj, rgw::sal::Object* src_obj, struct req_state* s,
     rgw::notify::EventType event_type, const std::string* object_name)
   {
+    dout(20) << "TRACER: pure passthrough function: read_notification type 1 " << dendl;
     return realStore->get_notification(obj, src_obj, s, event_type, object_name);
   }
 
@@ -892,41 +921,49 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
     std::string& _user_id, std::string& _user_tenant, std::string& _req_id,
     optional_yield y)
   {
+    dout(20) << "TRACER: pure passthrough function: get_notification type 2 " << dendl;
     return realStore->get_notification(dpp, obj, src_obj, rctx, event_type, _bucket, _user_id, _user_tenant, _req_id, y);
   }
 
   RGWLC* TracerDriver::get_rgwlc(void) {
+    dout(20) << "TRACER: pure passthrough function: get_rgwlc " << dendl;
     return realStore->get_rgwlc();
   }
 
   int TracerDriver::log_usage(const DoutPrefixProvider *dpp, map<rgw_user_bucket, RGWUsageBatch>& usage_info)
   {
+    dout(20) << "TRACER: pure passthrough function: log_usage " << dendl;
     return realStore->log_usage(dpp, usage_info);
   }
 
   int TracerDriver::log_op(const DoutPrefixProvider *dpp, string& oid, bufferlist& bl)
   {
+    dout(20) << "TRACER: pure passthrough function: log_op " << dendl;
     return realStore->log_op(dpp, oid, bl);
   }
 
   int TracerDriver::register_to_service_map(const DoutPrefixProvider *dpp, const string& daemon_type,
       const map<string, string>& meta)
   {
+    dout(20) << "TRACER: pure passthrough function: register_to_service_map " << dendl;
     return realStore->register_to_service_map(dpp, daemon_type, meta);
   }
 
   void TracerDriver::get_ratelimit(RGWRateLimitInfo& bucket_ratelimit, RGWRateLimitInfo& user_ratelimit, RGWRateLimitInfo& anon_ratelimit)
   {
+    dout(20) << "TRACER: pure passthrough function: get_ratelimit " << dendl;
     return realStore->get_ratelimit(bucket_ratelimit, user_ratelimit, anon_ratelimit);
   }
 
   void TracerDriver::get_quota(RGWQuotaInfo& bucket_quota, RGWQuotaInfo& user_quota)
   {
+    dout(20) << "TRACER: pure passthrough function: get_quota " << dendl;
     return realStore->get_quota(bucket_quota, user_quota);
   }
 
   int TracerDriver::set_buckets_enabled(const DoutPrefixProvider *dpp, vector<rgw_bucket>& buckets, bool enabled)
   {
+    dout(20) << "TRACER: pure passthrough function: set_buckets_enabled " << dendl;
     return realStore->set_buckets_enabled(dpp, buckets, enabled);
   }
 
@@ -936,11 +973,13 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
       RGWBucketSyncPolicyHandlerRef *phandler,
       optional_yield y)
   {
+    dout(20) << "TRACER: pure passthrough function:get_sync_policy_handler " << dendl;
     return realStore->get_sync_policy_handler(dpp, zone, bucket, phandler, y);
   }
 
   RGWDataSyncStatusManager* TracerDriver::get_data_sync_manager(const rgw_zone_id& source_zone)
   {
+    dout(20) << "TRACER: pure passthrough function: get_data_sync_manager " << dendl;
     return realStore->get_data_sync_manager(source_zone);
   }
 
@@ -949,46 +988,55 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
       RGWUsageIter& usage_iter,
       map<rgw_user_bucket, rgw_usage_log_entry>& usage)
   {
+    dout(20) << "TRACER: pure passthrough function: read_all_usage " << dendl;
     return realStore->read_all_usage(dpp, start_epoch, end_epoch, max_entries, is_truncated, usage_iter, usage);
   }
 
   int TracerDriver::trim_all_usage(const DoutPrefixProvider *dpp, uint64_t start_epoch, uint64_t end_epoch)
   {
+    dout(20) << "TRACER: pure passthrough function: trim_all_usage " << dendl;
     return realStore->trim_all_usage(dpp, start_epoch, end_epoch);
   }
 
   int TracerDriver::get_config_key_val(string name, bufferlist *bl)
   {
+    dout(20) << "TRACER: pure passthrough function: get_confog_key_val " << dendl;
     return realStore->get_config_key_val(name, bl);
   }
 
   int TracerDriver::meta_list_keys_init(const DoutPrefixProvider *dpp, const string& section, const string& marker, void** phandle)
   {
+    dout(20) << "TRACER: pure passthrough function: meta_list_keys_init " << dendl;
     return realStore->meta_list_keys_init(dpp, section, marker, phandle);
   }
 
   int TracerDriver::meta_list_keys_next(const DoutPrefixProvider *dpp, void* handle, int max, list<string>& keys, bool* truncated)
   {
+    dout(20) << "TRACER: pure passthrough function: meta_list_keys_next " << dendl;
     return realStore->meta_list_keys_next(dpp, handle, max, keys, truncated);
   }
 
   void TracerDriver::meta_list_keys_complete(void* handle)
   {
+    dout(20) << "TRACER: pure passthrough function: meta_list_keys_complete " << dendl;
     return realStore->meta_list_keys_complete(handle);
   }
 
   std::string TracerDriver::meta_get_marker(void* handle)
   {
+    dout(20) << "TRACER: pure passthrough function: meta_get_marker " << dendl;
     return realStore->meta_get_marker(handle);
   }
 
   int TracerDriver::meta_remove(const DoutPrefixProvider *dpp, string& metadata_key, optional_yield y)
   {
+    dout(20) << "TRACER: pure passthrough function: meta_remove " << dendl;
     return realStore->meta_remove(dpp, metadata_key, y);
   }
 
   std::unique_ptr<LuaScriptManager> TracerDriver::get_lua_script_manager()
   {
+    dout(20) << "TRACER: pure passthrough function: get_lua_script_manager " << dendl;
     return realStore->get_lua_script_manager();
   }
 
@@ -999,11 +1047,13 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
       std::string max_session_duration_str,
       std::multimap<std::string,std::string> tags)
   {
+    dout(20) << "TRACER: pure passthrough function: get_role type 1" << dendl;
     return realStore->get_role(name, tenant, path, trust_policy, max_session_duration_str, tags);
   }
 
   std::unique_ptr<RGWRole> TracerDriver::get_role(std::string id)
   {
+    dout(20) << "TRACER: pure passthrough function: read_usage type 2" << dendl;
     return realStore->get_role(id);
   }
 
@@ -1013,11 +1063,13 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
       const std::string& tenant,
       vector<std::unique_ptr<RGWRole>>& roles)
   {
+    dout(20) << "TRACER: pure passthrough function: get_roles " << dendl;
     return realStore->get_roles(dpp, y, path_prefix, tenant, roles);
   }
 
   std::unique_ptr<RGWOIDCProvider> TracerDriver::get_oidc_provider()
   {
+    dout(20) << "TRACER: pure passthrough function: get_oidc_provider " << dendl;
     return realStore->get_oidc_provider();
   }
 
@@ -1025,6 +1077,7 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
       const std::string& tenant,
       vector<std::unique_ptr<RGWOIDCProvider>>& providers)
   {
+    dout(20) << "TRACER: pure passthrough function: get_oidc_providers " << dendl;
     return realStore->get_oidc_providers(dpp, tenant, providers);
   }
 
@@ -1036,6 +1089,7 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
 				  const std::string& unique_tag,
 				  uint64_t position,
 				  uint64_t *cur_accounted_size) {
+    dout(20) << "TRACER: pure passthrough function: get_append_writer " << dendl;
     return realStore->get_append_writer(dpp, y, std::move(_head_obj), owner, obj_ctx, ptail_placement_rule, unique_tag, position, cur_accounted_size);
   }
 
@@ -1046,6 +1100,7 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
 				  const rgw_placement_rule *ptail_placement_rule,
 				  uint64_t olh_epoch,
 				  const std::string& unique_tag) {
+    dout(20) << "TRACER: pure passthrough function: get_atomic_writer " << dendl;
     return realStore->get_atomic_writer(dpp, y, std::move(_head_obj), owner, obj_ctx, ptail_placement_rule, olh_epoch, unique_tag);
   }
 

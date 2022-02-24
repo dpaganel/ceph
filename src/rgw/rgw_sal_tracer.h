@@ -193,7 +193,16 @@ class TracerUser : public User {
       
 
     public:
-      
+
+      /*for get_bucket type 1*/
+      TracerBucket(TracerDriver *_st, rgw_bucket& _b, std::unique_ptr<Bucket> _rb, User * _u) //implement this
+      : trace(_st),
+        acls(),
+        realBucket(std::move(_rb)),
+        Bucket(_u)
+        { }
+
+
       TracerBucket(TracerBucket &_b, std::unique_ptr<Bucket> _rb) 
       : trace(_b.trace),
         acls(), 
