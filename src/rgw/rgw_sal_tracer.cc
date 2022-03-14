@@ -195,7 +195,7 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
       optional_yield y)
   {
     //dout(20) << "TRACER: making ReadOp" << dendl;
-    //ldpp_dout(dpp, 20) << "TRACER: pure passthrough function: transition" << dendl;
+    ldpp_dout(dpp, 20) << "TRACER: pure passthrough function: transition" << dendl;
     return realObject->transition(rctx, bucket, placement_rule, mtime, olh_epoch, dpp, y);
   }
 
@@ -226,8 +226,8 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
   {
     ldpp_dout(dpp, 20) << "TRACER: pure passthrough function: swift_versioning_copy" << dendl;
     //This causes segfaults?
-    //return realObject->swift_versioning_copy(obj_ctx, dpp, y);
-    return 0;
+    return realObject->swift_versioning_copy(obj_ctx, dpp, y);
+    //return 0;
   }
 
   std::unique_ptr<Object::ReadOp> TObject::get_read_op(RGWObjectCtx* ctx)
@@ -475,7 +475,7 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
   std::unique_ptr<Object> TracerBucket::get_object(const rgw_obj_key& k)
   {
     /* TODO: reimplement when TObjects are complete */
-    return std::make_unique<TObject>(this->trace, k, this);
+    //return std::make_unique<TObject>(this->trace, k, this);
     
     dout(20) << "TRACER: BUCKET: Intercepted operation: get_object" << dendl;
     return realBucket->get_object(k);
@@ -566,7 +566,7 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
   {
     ldpp_dout(dpp, 20) << "TRACER: BUCKET: recieved operation: load_bucket "<< dendl;
     int ret = 0;
-    //ret = realBucket->load_bucket(dpp, y, get_stats);
+    ret = realBucket->load_bucket(dpp, y, get_stats);
     ldpp_dout(dpp, 20) << "TRACER: BUCKET: returned from operation: load_bucket "<< dendl;
     return ret;
   }
@@ -594,26 +594,31 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
 
   int TracerBucket::sync_user_stats(const DoutPrefixProvider *dpp, optional_yield y)
   {
+    ldpp_dout(dpp, 20) << "TRACER: BUCKET: recieved operation: sync_user_stats "<< dendl;
     return realBucket->sync_user_stats(dpp,y);
   }
 
   int TracerBucket::update_container_stats(const DoutPrefixProvider *dpp)
   {
+    ldpp_dout(dpp, 20) << "TRACER: BUCKET: recieved operation: update_container_stats "<< dendl;
     return realBucket->update_container_stats(dpp);
   }
 
   int TracerBucket::check_bucket_shards(const DoutPrefixProvider *dpp)
   {
+    ldpp_dout(dpp, 20) << "TRACER: BUCKET: recieved operation: check_bucket_shards "<< dendl;
     return realBucket->check_bucket_shards(dpp);
   }
 
   int TracerBucket::chown(const DoutPrefixProvider *dpp, User* new_user, User* old_user, optional_yield y, const std::string* marker)
   {
+    ldpp_dout(dpp, 20) << "TRACER: BUCKET: recieved operation: chown "<< dendl;
     return realBucket->chown(dpp, new_user, old_user, y, marker);
   }
 
   int TracerBucket::put_info(const DoutPrefixProvider *dpp, bool exclusive, ceph::real_time _mtime)
   {
+    ldpp_dout(dpp, 20) << "TRACER: BUCKET: recieved operation: put_info "<< dendl;
     return realBucket->put_info(dpp, exclusive, _mtime);
 
   }
@@ -627,6 +632,7 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
   int TracerBucket::check_empty(const DoutPrefixProvider *dpp, optional_yield y)
   {
     /* XXX: Check if bucket contains any objects */
+    ldpp_dout(dpp, 20) << "TRACER: BUCKET: recieved operation: check_empty" << dendl;
     return realBucket->check_empty(dpp, y);
   }
 
@@ -639,11 +645,13 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
 
   int TracerBucket::merge_and_store_attrs(const DoutPrefixProvider *dpp, Attrs& new_attrs, optional_yield y)
   {
+    ldpp_dout(dpp, 20) << "TRACER: BUCKET: recieved operation: check_empty" << dendl;
     return realBucket->merge_and_store_attrs(dpp, new_attrs, y);
   }
 
   int TracerBucket::try_refresh_info(const DoutPrefixProvider *dpp, ceph::real_time *pmtime)
   {
+    ldpp_dout(dpp, 20) << "TRACER: BUCKET: recieved operation: try_refresh_info" << dendl;
     return realBucket->try_refresh_info(dpp, pmtime);
   }
 
@@ -653,11 +661,13 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
       RGWUsageIter& usage_iter,
       map<rgw_user_bucket, rgw_usage_log_entry>& usage)
   {
+    ldpp_dout(dpp, 20) << "TRACER: BUCKET: recieved operation: read_usage" << dendl;
     return realBucket->read_usage(dpp, start_epoch, end_epoch, max_entries, is_truncated, usage_iter, usage);
   }
 
   int TracerBucket::trim_usage(const DoutPrefixProvider *dpp, uint64_t start_epoch, uint64_t end_epoch)
   {
+    ldpp_dout(dpp, 20) << "TRACER: BUCKET: recieved operation: trim_usage" << dendl;
     return realBucket->trim_usage(dpp, start_epoch, end_epoch);
   }
 
@@ -738,7 +748,7 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
   int TracerDriver::get_user_by_access_key(const DoutPrefixProvider *dpp, const std::string& key, optional_yield y, std::unique_ptr<User>* user)
   {
     dout(20) << "TRACER: pass thru operation: get_user_by_access_key" << dendl;
-    return realStore->get_user_by_access_key(dpp, key, y, std::move(user));
+    return realStore->get_user_by_access_key(dpp, key, y, user);
 
     ldpp_dout(dpp,20) << "TRACER: intercepted operation: get_user_by_access_key, key: " << key << dendl;
 
@@ -789,33 +799,31 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
   std::unique_ptr<Object> TracerDriver::get_object(const rgw_obj_key& k)
   {
     dout(20) << "TRACER: recieved operation: get_object" << dendl;
-    return std::make_unique<TObject>(this, k);
+    //return std::make_unique<TObject>(this, k);
     
-    //return realStore->get_object(k);
+    return realStore->get_object(k);
   }
 
    int TracerDriver::get_bucket(const DoutPrefixProvider *dpp, User* u, const rgw_bucket& b, std::unique_ptr<Bucket>* bucket, optional_yield y)
   {
+    /*
     dout(20) << "TRACER: performing passthrough function: get_bucket type 1, from store: " << this->get_name() << dendl;
     return realStore->get_bucket(dpp, u, b, bucket, y);
+    */
+  
     int ret;
     //Bucket * bp;
     
     dout(20) << "TRACER: intercepting operation: get_bucket type 1, from store: " << this->get_name() << dendl;
 
-    //TracerBucket * bp = new TracerBucket(this);
-    std::unique_ptr<Bucket> * storeBucket;// = std::move(bucket);
-    
     ret = realStore->get_bucket(dpp, u, b, bucket, y);
-
-    //dout(20) << "TRACER: get_bucket type 1: returned from realBucket get/load " << this->get_name() << dendl;
 
     if (ret < 0)
       return ret;
 
-    //Bucket * bp = new TracerBucket(this, b, storeBucket->get()->get_info()/*, u*/);
-    Bucket * bp = new TracerBucket(this, storeBucket->get()->get_info(), std::move(bucket));
-    //ret = bp->load_bucket(dpp, y);
+    
+    Bucket * bp = new TracerBucket(this, b, bucket, u);
+    bp->load_bucket(dpp, y);
     if (ret < 0)
     {
       delete bp;
@@ -829,25 +837,32 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
     bucket->reset(bp);
     dout(20) << "TRACER: Returned from get_bucket type 1" << dendl;
     return ret;
+  
   }
 
   int TracerDriver::get_bucket(User* u, const RGWBucketInfo& i, std::unique_ptr<Bucket>* bucket)
   {
+    /*
     dout(20) << "TRACER: performing passthrough function: get_bucket type 2, from store: " << this->get_name() << dendl;
     return realStore->get_bucket(u, i, bucket);
-
+    */
+    
     dout(20) << "TRACER: intercepting operation: get_bucket type 2, from store: " << this->get_name() << dendl;
     Bucket * bp;
     bp = new TracerBucket(this, i, u);
+    bp->get_info().placement_rule = bp->get_placement_rule();
     bucket->reset(bp);
     dout(20) << "TRACER: Returned from get_bucket type 2" << dendl;
     return 0;
+    
   }
 
   int TracerDriver::get_bucket(const DoutPrefixProvider *dpp, User* u, const std::string& tenant, const std::string& name, std::unique_ptr<Bucket>* bucket, optional_yield y)
   {
+    /*
     dout(20) << "TRACER: performing passthrough function: get_bucket type 3, from store: " << this->get_name() << dendl;
     return realStore->get_bucket(dpp, u, tenant, name, bucket, y);
+    */
     dout(20) << "TRACER: intercepting operation: get_bucket type 3, from store: " << this->get_name() << dendl;
 
     int ret;
@@ -860,6 +875,7 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
 
     ldpp_dout(dpp,20) << "TRACER: returned operation: get_bucket type 3, from store: " << this->get_name() << dendl;
     return ret;
+    
   }
 
   bool TracerDriver::is_meta_master()

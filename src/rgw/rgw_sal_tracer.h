@@ -41,6 +41,7 @@
 #include "store/dbstore/dbstore_mgr.h"
 */
 
+
 //TODO: There's several classes that use DB::Object 
 
 namespace rgw { namespace sal {
@@ -195,13 +196,25 @@ class TracerUser : public User {
     public:
 
       /*for get_bucket type 1*/
-      TracerBucket(TracerDriver *_st, rgw_bucket& _b, std::unique_ptr<Bucket> _rb, User * _u) //implement this
-      : trace(_st),
+      TracerBucket(TracerDriver *_st, const rgw_bucket& _b, std::unique_ptr<Bucket> * _rb, User * _u) //implement this
+      : Bucket(_b, _u),
+        trace(_st),
         acls(),
-        realBucket(std::move(_rb)),
-        Bucket(_u)
+        realBucket(std::move(*_rb))        
         { }
 
+        TracerBucket(TracerDriver *_st, const RGWBucketInfo& _i, std::unique_ptr<Bucket> * _rb)
+        : Bucket(_i),
+        trace(_st),
+        acls(),
+        realBucket(std::move(* _rb)) {
+        }
+
+        TracerBucket(TracerDriver *_st, const RGWBucketInfo& _i, User* _u)
+        : Bucket(_i, _u),
+        trace(_st),
+        acls() {
+        }
 
       TracerBucket(TracerBucket &_b, std::unique_ptr<Bucket> _rb) 
       : trace(_b.trace),
@@ -238,12 +251,6 @@ class TracerUser : public User {
         acls() {
         }
 
-        TracerBucket(TracerDriver *_st, const RGWBucketInfo& _i, std::unique_ptr<Bucket> * _rb)
-        : Bucket(_i),
-        trace(_st),
-        acls(),
-        realBucket(std::move(* _rb)) {
-        }
 
       TracerBucket(TracerDriver *_st, const rgw_bucket& _b, User* _u)
         : Bucket(_b, _u),
@@ -259,13 +266,16 @@ class TracerUser : public User {
         {
         }
 
-      TracerBucket(TracerDriver *_st, const RGWBucketInfo& _i, User* _u)
-        : Bucket(_i, _u),
-        trace(_st),
-        acls() {
-        }
+
 
       ~TracerBucket() { }
+
+      /*bucket functions from rgw_sal.h*/
+      virtual rgw_placement_rule& get_placement_rule() { return realBucket->get_placement_rule(); }
+
+      virtual Attrs& get_attrs() { return realBucket->get_attrs(); }
+
+
 
       virtual std::unique_ptr<Bucket> clone() override {
         return std::unique_ptr<Bucket>(new TracerBucket(*this, std::move(this->realBucket)));
@@ -736,7 +746,7 @@ public:
   class TracerDriver : public Store {
   private:
     Store* realStore; /* The one that actually does stuff */
-    TZone* zone;
+    TZone zone;
     
     
 
