@@ -201,7 +201,15 @@ class TracerUser : public User {
         trace(_st),
         acls(),
         realBucket(std::move(*_rb))        
-        { }
+        { 
+          /*temporary measure to ensure ent is correct - Daniel P*/
+
+          /*
+          if(_rb->get()->get_ent())
+            set_ent(_rb->get()->get_ent());
+            */
+
+        }
 
         TracerBucket(TracerDriver *_st, const RGWBucketInfo& _i, std::unique_ptr<Bucket> * _rb)
         : Bucket(_i),
@@ -270,12 +278,7 @@ class TracerUser : public User {
 
       ~TracerBucket() { }
 
-      /*bucket functions from rgw_sal.h*/
       virtual rgw_placement_rule& get_placement_rule() { return realBucket->get_placement_rule(); }
-
-      virtual Attrs& get_attrs() { return realBucket->get_attrs(); }
-
-
 
       virtual std::unique_ptr<Bucket> clone() override {
         return std::unique_ptr<Bucket>(new TracerBucket(*this, std::move(this->realBucket)));

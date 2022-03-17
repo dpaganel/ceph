@@ -638,6 +638,8 @@ int rgw_build_bucket_policies(const DoutPrefixProvider *dpp, rgw::sal::Store* st
     ret = -EACCES;
   }
 
+  ldpp_dout(dpp, 20) << "s->redirect_zone_endpoint: " << s->redirect_zone_endpoint << dendl;
+
   bool success = store->get_zone()->get_redirect_endpoint(&s->redirect_zone_endpoint);
   if (success) {
     ldpp_dout(dpp, 20) << "redirect_zone_endpoint=" << s->redirect_zone_endpoint << dendl;

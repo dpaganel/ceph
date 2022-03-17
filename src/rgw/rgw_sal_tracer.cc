@@ -812,7 +812,7 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
     */
   
     int ret;
-    //Bucket * bp;
+    
     
     dout(20) << "TRACER: intercepting operation: get_bucket type 1, from store: " << this->get_name() << dendl;
 
@@ -823,7 +823,14 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
 
     
     Bucket * bp = new TracerBucket(this, b, bucket, u);
-    bp->load_bucket(dpp, y);
+    
+    /*copy the information and other protected traits of a sal::bucket to tracerBucket*/
+    //bp->set_attrs(bucket->get()->get_attrs());
+    //bp->set_acl(dpp, bucket->get()->get_acl(), y);
+    //bp->set_info(bucket->get()->get_info());
+    //bp->set_real_time(bucket->get()->get_real_time());
+    //bp->set_obj_version(bucket->get()->get_obj_version());
+    
     if (ret < 0)
     {
       delete bp;

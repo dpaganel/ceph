@@ -720,7 +720,7 @@ class Bucket {
     /** Get the cached object count of this bucket */
     uint64_t get_count() const { return ent.count; }
     /** Get the cached placement rule of this bucket */
-    rgw_placement_rule& get_placement_rule() { return info.placement_rule; }
+    virtual rgw_placement_rule& get_placement_rule() { return info.placement_rule; } //temporary - Daniel P
     /** Get the cached creation time of this bucket */
     ceph::real_time& get_creation_time() { return info.creation_time; }
     /** Get the cached modification time of this bucket */
@@ -761,6 +761,14 @@ class Bucket {
     rgw_bucket& get_key() { return info.bucket; }
     RGWBucketInfo& get_info() { return info; }
 
+    /*this is temporary until alterations are made to Bucket's protected members - Daniel P */
+    void set_info(RGWBucketInfo& new_info) {info = new_info; }
+    RGWBucketEnt get_ent() {return ent; } //This has a tendency to try and access info at 0x0
+    obj_version get_obj_version() {return bucket_version; }
+    void set_obj_version(obj_version new_bucket_version) {bucket_version = new_bucket_version; }
+    ceph::real_time get_real_time() {return mtime; }
+    void set_real_time(ceph::real_time new_real_time) {mtime = new_real_time; }
+
     friend inline std::ostream& operator<<(std::ostream& out, const Bucket& b) {
       out << b.info.bucket;
       return out;
@@ -792,7 +800,7 @@ class Bucket {
 
     friend class BucketList;
   protected:
-    virtual void set_ent(RGWBucketEnt& _ent) { ent = _ent; info.bucket = ent.bucket; info.placement_rule = ent.placement_rule; }
+    virtual void set_ent(RGWBucketEnt _ent) { ent = _ent; info.bucket = ent.bucket; info.placement_rule = ent.placement_rule; }
 };
 
 /**
