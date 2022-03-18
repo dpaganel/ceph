@@ -196,19 +196,18 @@ class TracerUser : public User {
     public:
 
       /*for get_bucket type 1*/
-      TracerBucket(TracerDriver *_st, const rgw_bucket& _b, std::unique_ptr<Bucket> * _rb, User * _u) //implement this
+      TracerBucket(TracerDriver *_st, const rgw_bucket& _b, std::unique_ptr<Bucket> * _rb, User * _u)
       : Bucket(_b, _u),
         trace(_st),
         acls(),
-        realBucket(std::move(*_rb))        
-        { 
-          /*temporary measure to ensure ent is correct - Daniel P*/
+        realBucket(std::move(*_rb)){
+        }
 
-          /*
-          if(_rb->get()->get_ent())
-            set_ent(_rb->get()->get_ent());
-            */
-
+      TracerBucket(TracerDriver *_st, const rgw_bucket& _b, User * _u)
+      : Bucket(_b, _u),
+        trace(_st),
+        acls()
+        {
         }
 
         TracerBucket(TracerDriver *_st, const RGWBucketInfo& _i, std::unique_ptr<Bucket> * _rb)
@@ -259,14 +258,6 @@ class TracerUser : public User {
         acls() {
         }
 
-
-      TracerBucket(TracerDriver *_st, const rgw_bucket& _b, User* _u)
-        : Bucket(_b, _u),
-        trace(_st),
-        acls()
-        {
-        }
-
       TracerBucket(TracerDriver *_st, const RGWBucketEnt& _e, User* _u)
         : Bucket(_e, _u),
         trace(_st),
@@ -278,6 +269,7 @@ class TracerUser : public User {
 
       ~TracerBucket() { }
 
+      std::unique_ptr<Bucket> get_real_bucket() { return std::move(realBucket); }
       virtual rgw_placement_rule& get_placement_rule() { return realBucket->get_placement_rule(); }
 
       virtual std::unique_ptr<Bucket> clone() override {
