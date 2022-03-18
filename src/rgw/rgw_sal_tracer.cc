@@ -810,15 +810,11 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
     dout(20) << "TRACER: performing passthrough function: get_bucket type 1, from store: " << this->get_name() << dendl;
     return realStore->get_bucket(dpp, u, b, bucket, y);
     */
-  
     int ret;
-    
-    
-
-    
     dout(20) << "TRACER: intercepting operation: get_bucket type 1, from store: " << this->get_name() << dendl;
+
     TracerBucket * bp = new TracerBucket(this, b, u);
-    ret = realStore->get_bucket(dpp, u, b, bp->get_real_bucket(), y);
+    ret = realStore->get_bucket(dpp, u, b, &bp->get_real_bucket(), y);
 
     if (ret < 0)
       return ret;
