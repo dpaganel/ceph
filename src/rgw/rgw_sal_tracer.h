@@ -269,8 +269,8 @@ class TracerUser : public User {
 
       ~TracerBucket() { }
 
-      std::unique_ptr<Bucket> get_real_bucket() { return std::move(realBucket); }
-      virtual rgw_placement_rule& get_placement_rule() { return realBucket->get_placement_rule(); }
+      std::unique_ptr<Bucket>* get_real_bucket() { return &realBucket; }
+      //virtual rgw_placement_rule& get_placement_rule() { return realBucket->get_placement_rule(); }
 
       virtual std::unique_ptr<Bucket> clone() override {
         return std::unique_ptr<Bucket>(new TracerBucket(*this, std::move(this->realBucket)));
