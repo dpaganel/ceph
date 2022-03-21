@@ -472,6 +472,13 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
   }
   /*Tracerbucket functions */
 
+  int TracerBucket::update_bucket(std:unique_ptr<Bucket>* realBucket)
+  {
+    this->info = realBucket->get()->info;
+    this->ent = realBucket->get()->ent;
+    return 0;
+  }
+
   std::unique_ptr<Object> TracerBucket::get_object(const rgw_obj_key& k)
   {
     /* TODO: reimplement when TObjects are complete */
@@ -816,8 +823,11 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
     TracerBucket * bp = new TracerBucket(this, b, u);
     ret = realStore->get_bucket(dpp, u, b, bp->get_real_bucket(), y);
 
+    bp->update_bucket(bp->get_real_bucket());
+
     if (ret < 0)
       return ret;
+    
     
     /*copy the information and other protected traits of a sal::bucket to tracerBucket*/
     //bp->set_attrs(bucket->get()->get_attrs());

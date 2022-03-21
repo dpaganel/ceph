@@ -768,7 +768,7 @@ class Bucket {
     void set_obj_version(obj_version new_bucket_version) {bucket_version = new_bucket_version; }
     ceph::real_time get_real_time() {return mtime; }
     void set_real_time(ceph::real_time new_real_time) {mtime = new_real_time; }
-
+    
     friend inline std::ostream& operator<<(std::ostream& out, const Bucket& b) {
       out << b.info.bucket;
       return out;

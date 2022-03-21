@@ -270,7 +270,7 @@ class TracerUser : public User {
       ~TracerBucket() { }
 
       std::unique_ptr<Bucket>* get_real_bucket() { return &realBucket; }
-      //virtual rgw_placement_rule& get_placement_rule() { return realBucket->get_placement_rule(); }
+      virtual rgw_placement_rule& get_placement_rule() { return realBucket->get_placement_rule(); }
 
       virtual std::unique_ptr<Bucket> clone() override {
         return std::unique_ptr<Bucket>(new TracerBucket(*this, std::move(this->realBucket)));
@@ -324,6 +324,9 @@ class TracerUser : public User {
       virtual int abort_multiparts(const DoutPrefixProvider* dpp,
 				   CephContext* cct) override;
 
+      int update_bucket(std::unique_ptr<Bucket>* realBucket);
+
+
       friend class TracerDriver;
   };
 
@@ -351,6 +354,7 @@ class TracerUser : public User {
     virtual int read_url(const DoutPrefixProvider *dpp, const std::string& url, const std::string& tenant) override { return 0; }
     virtual int delete_obj(const DoutPrefixProvider *dpp, optional_yield y) override { return 0;}
 
+    
   };
 
   /*
