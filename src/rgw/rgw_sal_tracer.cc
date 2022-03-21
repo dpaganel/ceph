@@ -472,10 +472,10 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
   }
   /*Tracerbucket functions */
 
-  int TracerBucket::update_bucket(std:unique_ptr<Bucket>* realBucket)
+  int TracerBucket::update_bucket(std::unique_ptr<Bucket>* realBucket)
   {
-    this->info = realBucket->get()->info;
-    this->ent = realBucket->get()->ent;
+    this->info = realBucket->get()->get_info();
+    this->ent = realBucket->get()->get_ent();
     return 0;
   }
 
