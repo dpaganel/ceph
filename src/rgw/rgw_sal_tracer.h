@@ -203,6 +203,13 @@ class TracerUser : public User {
         realBucket(std::move(*_rb)){
         }
 
+      TracerBucket(TracerDriver *_st, const rgw_bucket& _b, User * _u, std::unique_ptr<Bucket>& _rb)
+      : Bucket(_b, _u),
+      trace(_st),
+      acls(),
+      realBucket(std::move(_rb))
+      {}
+
       TracerBucket(TracerDriver *_st, const rgw_bucket& _b, User * _u)
       : Bucket(_b, _u),
         trace(_st),

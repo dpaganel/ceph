@@ -816,18 +816,36 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
     /*
     dout(20) << "TRACER: performing passthrough function: get_bucket type 1, from store: " << this->get_name() << dendl;
     return realStore->get_bucket(dpp, u, b, bucket, y);
+
+
+
+    std::unique_ptr<Bucket> realBucket;
+    ret = realStore->get_bucket(dpp, u, b, &realBucket, y);
+    if (ret < 0)
+      return ret;
+    TracerBucket* bp = new TracerBucket(this, b, u, realBucket);
+
     */
     int ret;
     dout(20) << "TRACER: intercepting operation: get_bucket type 1, from store: " << this->get_name() << dendl;
 
+
+    std::unique_ptr<Bucket> realBucket;
+    ret = this->realStore->get_bucket(dpp, u, b, &realBucket, y);
+    if (ret < 0)
+      return ret;
+    TracerBucket* bp = new TracerBucket(this, b, u, realBucket);
+
+    /*
     TracerBucket * bp = new TracerBucket(this, b, u);
+
     ret = realStore->get_bucket(dpp, u, b, bp->get_real_bucket(), y);
 
     bp->update_bucket(bp->get_real_bucket());
 
     if (ret < 0)
       return ret;
-    
+    */
     
     /*copy the information and other protected traits of a sal::bucket to tracerBucket*/
     //bp->set_attrs(bucket->get()->get_attrs());
