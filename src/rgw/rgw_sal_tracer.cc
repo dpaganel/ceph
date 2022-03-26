@@ -476,6 +476,8 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
   {
     this->info = realBucket->get()->get_info();
     this->ent = realBucket->get()->get_ent();
+    this->set_owner(realBucket->get()->get_owner());
+    this->acls = realBucket->get()->get_acl();
     return 0;
   }
 
@@ -816,7 +818,8 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
     /*
     dout(20) << "TRACER: performing passthrough function: get_bucket type 1, from store: " << this->get_name() << dendl;
     return realStore->get_bucket(dpp, u, b, bucket, y);
-
+    */
+    /*
 
 
     std::unique_ptr<Bucket> realBucket;
@@ -835,13 +838,14 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
     if (ret < 0)
       return ret;
     TracerBucket* bp = new TracerBucket(this, b, u, realBucket);
-
+    //bp->set_acl(dpp,bp->get_real_bucket()->get()->get_acl(),y);
+    bp->update_bucket(bp->get_real_bucket());
     /*
     TracerBucket * bp = new TracerBucket(this, b, u);
 
     ret = realStore->get_bucket(dpp, u, b, bp->get_real_bucket(), y);
 
-    bp->update_bucket(bp->get_real_bucket());
+    
 
     if (ret < 0)
       return ret;
