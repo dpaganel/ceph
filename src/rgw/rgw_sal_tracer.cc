@@ -745,38 +745,72 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
 
   std::unique_ptr<User> TracerDriver::get_user(const rgw_user &u)
   {
+    /*
     dout(20) << "TRACER: pass thru operation: get_user" << dendl;
     return realStore->get_user(u);
-
+    */
     dout(20) << "TRACER: intercepted operation: get_user" << dendl;
-    std::unique_ptr<User> ret = make_unique<TracerUser>(this, u, std::move(realStore->get_user(u)));
+
+    std::unique_ptr<User> ret = make_unique<TracerUser>(this, u, std::move(realStore->get_user(u))); //I'm very concerned this won't work, but we'll see - Daniel P
     dout(20) << "TRACER: returned operation: get_user" << dendl;
-    return realStore->get_user(u);
+    return ret;
   }
 
   int TracerDriver::get_user_by_access_key(const DoutPrefixProvider *dpp, const std::string& key, optional_yield y, std::unique_ptr<User>* user)
   {
-    dout(20) << "TRACER: pass thru operation: get_user_by_access_key" << dendl;
-    return realStore->get_user_by_access_key(dpp, key, y, user);
 
-    ldpp_dout(dpp,20) << "TRACER: intercepted operation: get_user_by_access_key, key: " << key << dendl;
-
-    //RGWUserInfo uinfo;
-    User *u;
-    int ret = 0;
-    RGWObjVersionTracker objv_tracker;
-    
-    std::unique_ptr<User>* storeUser = user;
-
-    ret = realStore->get_user_by_access_key(dpp, key, y, storeUser);
-
+    /*
+        std::unique_ptr<Bucket> realBucket;
+    ret = this->realStore->get_bucket(dpp, u, b, &realBucket, y);
     if (ret < 0)
       return ret;
-      
-    u = new TracerUser(this, storeUser->get()->get_info(), std::move(user));
+    TracerBucket* bp = new TracerBucket(this, b, u, realBucket);
 
-    if (!u)
+    bp->update_bucket(bp->get_real_bucket());
+
+    if (ret < 0)
+    {
+      delete bp;
+      return ret;
+    }
+
+    if (!bp)
       return -ENOMEM;
+
+    
+    bucket->reset(bp);
+    */
+
+    /*    
+    dout(20) << "TRACER: pass thru operation: get_user_by_access_key" << dendl;
+    return realStore->get_user_by_access_key(dpp, key, y, user);
+    */
+    ldpp_dout(dpp,20) << "TRACER: intercepted operation: get_user_by_access_key, key: " << key << dendl;
+    User *u;
+    //no uinfo becaue it gets it from the bucket it is shadowing
+    RGWObjVersionTracker objv_tracker;
+    std::unique_ptr<User> real_user;
+    int ret = 0;
+
+    ret = this->realStore->get_user_by_access_key(dpp, key, y, &real_user);
+    if (ret < 0)
+    {
+      ldpp_dout(dpp, 20) << "TRACER: ret failure: " << ret << dendl;
+      return ret;
+    }
+     
+    
+    u = new TracerUser(this, real_user->get_info(), &real_user);
+    
+    if (!u)
+    {
+      ldpp_dout(dpp, 20) << "TRACER: -ENOMEM" << dendl;
+      return -ENOMEM;
+    }
+      
+    //TODO: update user
+
+
 
     u->get_version_tracker() = objv_tracker;
     user->reset(u);
@@ -819,16 +853,7 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
     dout(20) << "TRACER: performing passthrough function: get_bucket type 1, from store: " << this->get_name() << dendl;
     return realStore->get_bucket(dpp, u, b, bucket, y);
     */
-    /*
 
-
-    std::unique_ptr<Bucket> realBucket;
-    ret = realStore->get_bucket(dpp, u, b, &realBucket, y);
-    if (ret < 0)
-      return ret;
-    TracerBucket* bp = new TracerBucket(this, b, u, realBucket);
-
-    */
     int ret;
     dout(20) << "TRACER: intercepting operation: get_bucket type 1, from store: " << this->get_name() << dendl;
 
@@ -838,26 +863,9 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
     if (ret < 0)
       return ret;
     TracerBucket* bp = new TracerBucket(this, b, u, realBucket);
-    //bp->set_acl(dpp,bp->get_real_bucket()->get()->get_acl(),y);
+
     bp->update_bucket(bp->get_real_bucket());
-    /*
-    TracerBucket * bp = new TracerBucket(this, b, u);
 
-    ret = realStore->get_bucket(dpp, u, b, bp->get_real_bucket(), y);
-
-    
-
-    if (ret < 0)
-      return ret;
-    */
-    
-    /*copy the information and other protected traits of a sal::bucket to tracerBucket*/
-    //bp->set_attrs(bucket->get()->get_attrs());
-    //bp->set_acl(dpp, bucket->get()->get_acl(), y);
-    //bp->set_info(bucket->get()->get_info());
-    //bp->set_real_time(bucket->get()->get_real_time());
-    //bp->set_obj_version(bucket->get()->get_obj_version());
-    
     if (ret < 0)
     {
       delete bp;
