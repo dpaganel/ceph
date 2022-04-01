@@ -745,54 +745,33 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
 
   std::unique_ptr<User> TracerDriver::get_user(const rgw_user &u)
   {
-    /*
+    
     dout(20) << "TRACER: pass thru operation: get_user" << dendl;
     return realStore->get_user(u);
-    */
+    
     dout(20) << "TRACER: intercepted operation: get_user" << dendl;
-
-    std::unique_ptr<User> ret = make_unique<TracerUser>(this, u, std::move(realStore->get_user(u))); //I'm very concerned this won't work, but we'll see - Daniel P
-    dout(20) << "TRACER: returned operation: get_user" << dendl;
-    return ret;
+    std::unique_ptr<User> real_user;
+    real_user = realStore->get_user(u);
+    //std::unique_ptr<User> ret =  //I'm very concerned this won't work, but we'll see - Daniel P
+    //dout(20) << "TRACER: returned operation: get_user" << dendl;
+    
+    return make_unique<TracerUser>(this, u, std::move(real_user));
   }
 
   int TracerDriver::get_user_by_access_key(const DoutPrefixProvider *dpp, const std::string& key, optional_yield y, std::unique_ptr<User>* user)
   {
-
-    /*
-        std::unique_ptr<Bucket> realBucket;
-    ret = this->realStore->get_bucket(dpp, u, b, &realBucket, y);
-    if (ret < 0)
-      return ret;
-    TracerBucket* bp = new TracerBucket(this, b, u, realBucket);
-
-    bp->update_bucket(bp->get_real_bucket());
-
-    if (ret < 0)
-    {
-      delete bp;
-      return ret;
-    }
-
-    if (!bp)
-      return -ENOMEM;
-
     
-    bucket->reset(bp);
-    */
-
-    /*    
     dout(20) << "TRACER: pass thru operation: get_user_by_access_key" << dendl;
     return realStore->get_user_by_access_key(dpp, key, y, user);
-    */
+    
     ldpp_dout(dpp,20) << "TRACER: intercepted operation: get_user_by_access_key, key: " << key << dendl;
     User *u;
     //no uinfo becaue it gets it from the bucket it is shadowing
     RGWObjVersionTracker objv_tracker;
-    std::unique_ptr<User> real_user;
+    //std::unique_ptr<User> real_user;
     int ret = 0;
 
-    ret = this->realStore->get_user_by_access_key(dpp, key, y, &real_user);
+    ret = this->realStore->get_user_by_access_key(dpp, key, y, user);
     if (ret < 0)
     {
       ldpp_dout(dpp, 20) << "TRACER: ret failure: " << ret << dendl;
@@ -800,7 +779,7 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
     }
      
     
-    u = new TracerUser(this, real_user->get_info(), &real_user);
+    u = new TracerUser(this, user->get()->get_info(), user);
     
     if (!u)
     {
