@@ -67,6 +67,12 @@ namespace rgw::sal {
 
     /*user functions*/
 
+
+
+
+
+
+
     int TObject::delete_object(const DoutPrefixProvider* dpp, RGWObjectCtx* obj_ctx, optional_yield y, bool prevent_versioning)
   {
     ldpp_dout(dpp, 20) << "TRACER: Unimplemented function" << dendl;
@@ -745,10 +751,10 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
 
   std::unique_ptr<User> TracerDriver::get_user(const rgw_user &u)
   {
-    
+    /* 
     dout(20) << "TRACER: pass thru operation: get_user" << dendl;
     return realStore->get_user(u);
-    
+    */
     dout(20) << "TRACER: intercepted operation: get_user" << dendl;
     std::unique_ptr<User> real_user;
     real_user = realStore->get_user(u);
@@ -760,10 +766,10 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
 
   int TracerDriver::get_user_by_access_key(const DoutPrefixProvider *dpp, const std::string& key, optional_yield y, std::unique_ptr<User>* user)
   {
-    
+    /*
     dout(20) << "TRACER: pass thru operation: get_user_by_access_key" << dendl;
     return realStore->get_user_by_access_key(dpp, key, y, user);
-    
+    */
     ldpp_dout(dpp,20) << "TRACER: intercepted operation: get_user_by_access_key, key: " << key << dendl;
     User *u;
     //no uinfo becaue it gets it from the bucket it is shadowing

@@ -430,6 +430,13 @@ class User {
     User(User& _o) = default;
     virtual ~User() = default;
 
+
+    /*major modifications to sal -Daniel P*/
+    virtual bool info_empty()
+    {
+      return this->info.user_id.id.empty();
+    }
+
     /** Clone a copy of this user.  Used when modification is necessary of the copy */
     virtual std::unique_ptr<User> clone() = 0;
     /** List the buckets owned by a user */
@@ -456,37 +463,37 @@ class User {
 			    optional_yield y) = 0;
 
     /** Get the display name for this User */
-    virtual std::string& get_display_name() { return info.display_name; }
+    virtual std::string& get_display_name() { return info.display_name; }  
     /** Get the tenant name for this User */
-    const std::string& get_tenant() { return info.user_id.tenant; }
+    virtual const std::string& get_tenant() { return info.user_id.tenant; } //Changed for Tracer -Daniel P
     /** Set the tenant name for this User */
-    void set_tenant(std::string& _t) { info.user_id.tenant = _t; }
+    virtual void set_tenant(std::string& _t) { info.user_id.tenant = _t; } //Changed for Tracer -Daniel P
     /** Get the namespace for this User */
-    const std::string& get_ns() { return info.user_id.ns; }
+    virtual const std::string& get_ns() { return info.user_id.ns; } //Changed for Tracer -Daniel P
     /** Set the namespace for this User */
-    void set_ns(std::string& _ns) { info.user_id.ns = _ns; }
+    virtual void set_ns(std::string& _ns) { info.user_id.ns = _ns; } //Changed for Tracer -Daniel P
     /** Clear the namespace for this User */
-    void clear_ns() { info.user_id.ns.clear(); }
+    virtual void clear_ns() { info.user_id.ns.clear(); } //Changed for Tracer -Daniel P
     /** Get the full ID for this User */
-    const rgw_user& get_id() const { return info.user_id; }
+    virtual const rgw_user& get_id() const { return info.user_id; } //Changed for Tracer -Daniel P
     /** Get the type of this User */
-    uint32_t get_type() const { return info.type; }
+    virtual uint32_t get_type() const { return info.type; } //Changed for Tracer -Daniel P
     /** Get the maximum number of buckets allowed for this User */
-    int32_t get_max_buckets() const { return info.max_buckets; }
+    virtual int32_t get_max_buckets() const { return info.max_buckets; } //Changed for Tracer -Daniel P
     /** Get the capabilities for this User */
-    const RGWUserCaps& get_caps() const { return info.caps; }
+    virtual const RGWUserCaps& get_caps() const { return info.caps; } //Changed for Tracer -Daniel P
     /** Get the version tracker for this User */
-    virtual RGWObjVersionTracker& get_version_tracker() { return objv_tracker; }
+    virtual RGWObjVersionTracker& get_version_tracker() { return objv_tracker; } 
     /** Get the cached attributes for this User */
     virtual Attrs& get_attrs() { return attrs; }
     /** Set the cached attributes fro this User */
     virtual void set_attrs(Attrs& _attrs) { attrs = _attrs; }
     /** Check if a User pointer is empty */
-    static bool empty(User* u) { return (!u || u->info.user_id.id.empty()); }
+    static bool empty(User* u) { return (!u || u->info.user_id.id.empty()); } //Can't turn this virtual, which is a problem. -Daniel P
     /** Check if a User unique_pointer is empty */
-    static bool empty(std::unique_ptr<User>& u) { return (!u || u->info.user_id.id.empty()); }
+    static bool empty(std::unique_ptr<User>& u) { return (!u || u->info.user_id.id.empty()); } //Can't turn this virtual, which is a problem. -Daniel P
     /** Read the User attributes from the backing Store */
-    virtual int read_attrs(const DoutPrefixProvider* dpp, optional_yield y) = 0;
+    virtual int read_attrs(const DoutPrefixProvider* dpp, optional_yield y) = 0; 
     /** Set the attributes in attrs, leaving any other existing attrs set, and
      * write them to the backing store; a merge operation */
     virtual int merge_and_store_attrs(const DoutPrefixProvider* dpp, Attrs& new_attrs, optional_yield y) = 0;
@@ -514,14 +521,14 @@ class User {
     virtual int remove_user(const DoutPrefixProvider* dpp, optional_yield y) = 0;
 
     /* dang temporary; will be removed when User is complete */
-    RGWUserInfo& get_info() { return info; }
+    virtual RGWUserInfo& get_info() { return info; } //Changed for Tracer -Daniel P
 
-    friend inline std::ostream& operator<<(std::ostream& out, const User& u) {
+    friend inline std::ostream& operator<<(std::ostream& out, const User& u) { //The fact that these are friend functions are going to make it problematic for the Tracer implementation -Daniel P
       out << u.info.user_id;
       return out;
     }
 
-    friend inline std::ostream& operator<<(std::ostream& out, const User* u) {
+    friend inline std::ostream& operator<<(std::ostream& out, const User* u) { 
       if (!u)
 	out << "<NULL>";
       else
@@ -529,7 +536,7 @@ class User {
       return out;
     }
 
-    friend inline std::ostream& operator<<(std::ostream& out, const std::unique_ptr<User>& p) {
+    friend inline std::ostream& operator<<(std::ostream& out, const std::unique_ptr<User>& p) { 
       out << p.get();
       return out;
     }

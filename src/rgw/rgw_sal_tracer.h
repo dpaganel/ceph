@@ -146,6 +146,38 @@ class TracerUser : public User {
       virtual std::unique_ptr<User> clone() override {
         return std::unique_ptr<User>(new TracerUser(*this, std::move(this->realUser)));
       }
+      bool info_empty()
+      {
+        return realUser->info_empty();
+      }
+
+        std::string& get_display_name() { return realUser->get_display_name(); }  
+    /** Get the tenant name for this User */
+  const std::string& get_tenant() { return realUser->get_tenant(); } //Changed for Tracer -Daniel P
+    /** Set the tenant name for this User */
+  void set_tenant(std::string& _t) { realUser->set_tenant(_t); } //Changed for Tracer -Daniel P
+    /** Get the namespace for this User */
+  const std::string& get_ns() { return realUser->get_ns(); } //Changed for Tracer -Daniel P
+    /** Set the namespace for this User */
+  void set_ns(std::string& _ns) { realUser->set_ns(_ns); } //Changed for Tracer -Daniel P
+    /** Clear the namespace for this User */
+  void clear_ns() { realUser->clear_ns(); } //Changed for Tracer -Daniel P
+    /** Get the full ID for this User */
+  const rgw_user& get_id() const { return realUser->get_id(); } //Changed for Tracer -Daniel P
+    /** Get the type of this User */
+  uint32_t get_type() const { return realUser->get_type(); } //Changed for Tracer -Daniel P
+    /** Get the maximum number of buckets allowed for this User */
+  int32_t get_max_buckets() const { return realUser->get_max_buckets(); } //Changed for Tracer -Daniel P
+    /** Get the capabilities for this User */
+  const RGWUserCaps& get_caps() const { return realUser->get_caps(); } //Changed for Tracer -Daniel P
+    /** Get the version tracker for this User */
+  RGWObjVersionTracker& get_version_tracker() { return realUser->get_version_tracker(); } 
+    /** Get the cached attributes for this User */
+  Attrs& get_attrs() { return realUser->get_attrs(); }
+    /** Set the cached attributes fro this User */
+  void set_attrs(Attrs& _attrs) { realUser->set_attrs(_attrs); }
+
+  RGWUserInfo& get_info() { return info; } //Changed for Tracer -Daniel P
 
       int list_buckets(const DoutPrefixProvider *dpp, const std::string& marker, const std::string& end_marker,
           uint64_t max, bool need_stats, BucketList& buckets, optional_yield y) override;
@@ -765,7 +797,6 @@ public:
       {
         this->realStore = inputStore;
       }
-
       virtual const char* get_name() const override 
       {
         return realStore->get_name();
