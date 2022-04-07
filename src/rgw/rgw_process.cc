@@ -442,7 +442,13 @@ done:
   }
   int op_ret = 0;
 
-  if (user && !rgw::sal::User::empty(s->user.get())) {
+  bool empty;
+  if(!s->user.get())
+      empty = true;
+    else
+      empty = s->user.get()->info_empty();
+
+  if (user && !empty /*!rgw::sal::User::empty(s->user.get())*/) {
     *user = s->user->get_id().to_str();
   }
 

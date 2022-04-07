@@ -94,21 +94,26 @@ void RGWOp_Usage_Delete::execute(optional_yield y) {
   RESTArgs::get_epoch(s, "end", (uint64_t)-1, &end);
 
   
-  if(user.get())
-  {
-    bool is_empty = user.get()->info_empty();
-    if (is_empty /*rgw::sal::User::empty(user.get())*/ &&
-        !bucket_name.empty() &&
-        !start &&
-        end == (uint64_t)-1) {
-      bool remove_all;
-      RESTArgs::get_bool(s, "remove-all", false, &remove_all);
-      if (!remove_all) {
-        op_ret = -EINVAL;
-        return;
-      }
+
+
+  bool empty;
+  if(!user.get())
+      empty = true;
+  else
+      empty = user.get()->info_empty();
+
+  if (empty /*rgw::sal::User::empty(user.get())*/ &&
+      !bucket_name.empty() &&
+      !start &&
+      end == (uint64_t)-1) {
+    bool remove_all;
+    RESTArgs::get_bool(s, "remove-all", false, &remove_all);
+    if (!remove_all) {
+      op_ret = -EINVAL;
+      return;
     }
   }
+
   op_ret = RGWUsage::trim(this, store, user.get(), bucket.get(), start, end);
 }
 

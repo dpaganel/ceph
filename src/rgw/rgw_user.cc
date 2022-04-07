@@ -32,6 +32,8 @@
 
 #define dout_subsys ceph_subsys_rgw
 
+#define dout_context g_ceph_context
+
 using namespace std;
 
 extern void op_type_to_str(uint32_t mask, char *buf, int len);
@@ -350,17 +352,20 @@ RGWAccessKeyPool::RGWAccessKeyPool(RGWUser* usr)
 
 int RGWAccessKeyPool::init(RGWUserAdminOpState& op_state)
 {
+  dout(0) << "KEY POOL init" << dendl;
   if (!op_state.is_initialized()) {
     keys_allowed = false;
     return -EINVAL;
   }
 
+  dout(0) << "KEY POOL init 1" << dendl;
   const rgw_user& uid = op_state.get_user_id();
   if (uid.compare(RGW_USER_ANON_ID) == 0) {
     keys_allowed = false;
     return -EACCES;
   }
 
+  dout(0) << "KEY POOL init 2" << dendl;
   swift_keys = op_state.get_swift_keys();
   access_keys = op_state.get_access_keys();
 
@@ -1416,6 +1421,8 @@ int RGWUser::init(const DoutPrefixProvider *dpp, rgw::sal::Store* storage,
   if (ret < 0)
     return ret;
 
+  ldpp_dout(dpp, 0) << "init error diagnostic" << dendl;
+
   ret = init(dpp, op_state, y);
   if (ret < 0)
     return ret;
@@ -1452,9 +1459,13 @@ int RGWUser::init_storage(rgw::sal::Store* storage)
 
 int RGWUser::init(const DoutPrefixProvider *dpp, RGWUserAdminOpState& op_state, optional_yield y)
 {
+  ldpp_dout(dpp, 0) << "init error diagnostic 2" << dendl;
   bool found = false;
   std::string swift_user;
   user_id = op_state.get_user_id();
+
+  ldpp_dout(dpp, 0) << user_id << dendl;
+
   std::string user_email = op_state.get_user_email();
   std::string access_key = op_state.get_access_key();
   std::string subuser = op_state.get_subuser();
@@ -1513,29 +1524,34 @@ int RGWUser::init(const DoutPrefixProvider *dpp, RGWUserAdminOpState& op_state, 
   op_state.set_initialized();
 
   // this may have been called by a helper object
+  ldpp_dout(dpp, 0) << "init members time" << dendl;
   int ret = init_members(op_state);
   if (ret < 0)
-    return ret;
+  {
+    ldpp_dout(dpp, 0) << "init_members return and fail" << dendl;
+    return ret;    
+  }
 
+  ldpp_dout(dpp, 0) << "0 return" << dendl;
   return 0;
 }
 
 int RGWUser::init_members(RGWUserAdminOpState& op_state)
 {
   int ret = 0;
-
+  dout(0) << "init members 0" << dendl;
   ret = keys.init(op_state);
   if (ret < 0)
     return ret;
-
+  dout(0) << "init members 1" << dendl;
   ret = subusers.init(op_state);
   if (ret < 0)
     return ret;
-
+  dout(0) << "init members 2" << dendl;
   ret = caps.init(op_state);
   if (ret < 0)
     return ret;
-
+  dout(0) << "init members 3" << dendl;
   return 0;
 }
 
