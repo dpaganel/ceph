@@ -27,6 +27,9 @@
 #include "rgw_role.h"
 #include "rgw_multi.h"
 
+
+#define dout_context g_ceph_context
+#define dout_subsys ceph_subsys_rgw
 //rados includes
 /*
 #include "rgw_multi.h"
@@ -136,7 +139,8 @@ class TracerUser : public User {
       TracerDriver *trace;
       std::unique_ptr<User> realUser;
     public:
-      TracerUser(TracerDriver *_st, const rgw_user& _u, std::unique_ptr<User> _ru) : User(_u), trace(_st), realUser(std::move(_ru)) { }
+      //std::unique_ptr<Bucket> * _rb, realBucket(std::move(*_rb)){
+      TracerUser(TracerDriver *_st, const rgw_user& _u, std::unique_ptr<User>& _ru) : User(_u), trace(_st), realUser(std::move(_ru)) { }
       TracerUser(TracerDriver *_st, const RGWUserInfo& _i, std::unique_ptr<User> _ru) : User(_i), trace(_st), realUser(std::move(_ru)) { }
       TracerUser(TracerDriver * _st, const RGWUserInfo& _i, std::unique_ptr<User>* _ru) : User(_i), trace(_st),  realUser(std::move(* _ru)) {}
       TracerUser(TracerDriver *_st) : trace(_st) { }
@@ -163,7 +167,11 @@ class TracerUser : public User {
     /** Clear the namespace for this User */
   void clear_ns() { realUser->clear_ns(); } //Changed for Tracer -Daniel P
     /** Get the full ID for this User */
-  const rgw_user& get_id() const { return realUser->get_id(); } //Changed for Tracer -Daniel P
+  const rgw_user& get_id() const 
+  {
+    dout(0) << "Tracer get_id, my id is " << info.user_id << dendl; 
+    return realUser->get_id(); 
+  } //Changed for Tracer -Daniel P
     /** Get the type of this User */
   uint32_t get_type() const { return realUser->get_type(); } //Changed for Tracer -Daniel P
     /** Get the maximum number of buckets allowed for this User */
@@ -177,7 +185,7 @@ class TracerUser : public User {
     /** Set the cached attributes fro this User */
   void set_attrs(Attrs& _attrs) { realUser->set_attrs(_attrs); }
 
-  RGWUserInfo& get_info() { return info; } //Changed for Tracer -Daniel P
+  RGWUserInfo& get_info() { return realUser->get_info(); } //Changed for Tracer -Daniel P
 
       int list_buckets(const DoutPrefixProvider *dpp, const std::string& marker, const std::string& end_marker,
           uint64_t max, bool need_stats, BucketList& buckets, optional_yield y) override;

@@ -71,6 +71,8 @@ extern "C" {
 #define dout_context g_ceph_context
 #define dout_subsys ceph_subsys_rgw
 
+
+
 #define SECRET_KEY_LEN 40
 #define PUBLIC_ID_LEN 20
 
@@ -6187,6 +6189,8 @@ int main(int argc, const char **argv)
   // RGWUser to use for user operations
   RGWUser ruser;
   int ret = 0;
+
+  //cout << user.get() << dendl;
 
   if(!user.get())
       empty = true;

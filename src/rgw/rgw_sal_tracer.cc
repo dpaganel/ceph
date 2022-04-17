@@ -755,13 +755,13 @@ int TObject::set_obj_attrs(const DoutPrefixProvider* dpp, RGWObjectCtx* rctx, At
     dout(20) << "TRACER: pass thru operation: get_user" << dendl;
     return realStore->get_user(u);
     */
-    dout(20) << "TRACER: intercepted operation: get_user" << dendl;
+    dout(0) << "TRACER: intercepted operation: get_user" << dendl;
     std::unique_ptr<User> real_user;
     real_user = realStore->get_user(u);
     //std::unique_ptr<User> ret =  //I'm very concerned this won't work, but we'll see - Daniel P
     //dout(20) << "TRACER: returned operation: get_user" << dendl;
     
-    return make_unique<TracerUser>(this, u, std::move(real_user));
+    return make_unique<TracerUser>(this, u, real_user);
   }
 
   int TracerDriver::get_user_by_access_key(const DoutPrefixProvider *dpp, const std::string& key, optional_yield y, std::unique_ptr<User>* user)
