@@ -58,6 +58,9 @@
 #ifdef WITH_RADOSGW_DBSTORE
 #include "rgw_sal_dbstore.h"
 #endif
+#ifdef WITH_RADOSGW_TRACER
+#include "rgw_sal_tracer.h" //insert #ifdef statement for later -Daniel P
+#endif
 
 #include "services/svc_zone.h"
 
@@ -65,8 +68,7 @@
 #include <sys/prctl.h>
 #endif
 
-//insert #ifdef statement for later Dan P
-#include "rgw_sal_tracer.h"
+
 
 #define dout_subsys ceph_subsys_rgw
 
@@ -171,7 +173,7 @@ static RGWRESTMgr *set_logging(RGWRESTMgr *mgr)
   return mgr;
 }
 
-static RGWRESTMgr *rest_filter(rgw::sal::Store* store, int dialect, RGWRESTMgr *orig) //how does this factor in? - Daniel
+static RGWRESTMgr *rest_filter(rgw::sal::Store* store, int dialect, RGWRESTMgr *orig)
 {
   RGWSyncModuleInstanceRef sync_module = store->get_sync_module();
   if (sync_module) {
@@ -356,16 +358,16 @@ int radosgw_Main(int argc, const char **argv)
 
   std::string rgw_store = (!rgw_d3n_datacache_enabled) ? "rados" : "d3n";
 
-  const auto& config_store = g_conf().get_val<std::string>("rgw_backend_store"); //Dan P: confirmation of yaml interaction - template for new functions in rgw_sal.cc
+  const auto& config_store = g_conf().get_val<std::string>("rgw_backend_store");
 #ifdef WITH_RADOSGW_DBSTORE
-  if (config_store == "dbstore") { //Dan P: first note of dbstore, using yaml... what's difference between store on line 363 and this rgw_store?
+  if (config_store == "dbstore") { 
     rgw_store = "dbstore";
   }
 #endif
 
   rgw::sal::Store* store =
     StoreManager::get_storage(&dp, g_ceph_context,
-				 rgw_store, //Dan P: oh we use the store assigned above - so I think we can interact with it here or in get_storage
+				 rgw_store,
 				 g_conf()->rgw_enable_gc_threads,
 				 g_conf()->rgw_enable_lc_threads,
 				 g_conf()->rgw_enable_quota_threads,

@@ -28,8 +28,9 @@
 #ifdef WITH_RADOSGW_DBSTORE
 #include "rgw_sal_dbstore.h"
 #endif
-
+#ifdef WITH_RADOSGW_TRACER
 #include "rgw_sal_tracer.h" //get an ifdef here later
+#endif
 
 #define dout_subsys ceph_subsys_rgw
 
@@ -38,20 +39,19 @@ extern rgw::sal::Store* newStore(void);
 #ifdef WITH_RADOSGW_DBSTORE
 extern rgw::sal::Store* newDBStore(CephContext *cct);
 #endif
-/*need ifdef statement Dan P*/
-extern rgw::sal::Store* newTracer(const DoutPrefixProvider *dpp, rgw::sal::Store* inputStore); //Clean this up - Dan P
+#ifdef WITH_RADOSGW_TRACER
+extern rgw::sal::Store* newTracer(const DoutPrefixProvider *dpp, rgw::sal::Store* inputStore);
+#endif
 }
 
 rgw::sal::Store* StoreManager::init_storage_provider(const DoutPrefixProvider* dpp, CephContext* cct, const std::string svc, bool use_gc_thread, bool use_lc_thread, bool quota_threads, bool run_sync_thread, bool run_reshard_thread, bool use_cache, bool use_gc)
 {  
-  /*This is a quick and dirty way of getting this to work and I'd like to come up with a cleaner way to link the tracer and the actual store together
-  *once it actually works. Dan P */
-  bool config_tracer =g_conf().get_val<bool>("rgw_tracer_drive"); //this doesn't work right now - Dan P
-  config_tracer = true;
+
+  rgw::sal::Store* store = nullptr;
 
   ldpp_dout(dpp, 0) << "Initializing storage: " << svc << dendl;
   if (svc.compare("rados") == 0) {
-    rgw::sal::Store* store = newStore();
+    store = newStore();
     RGWRados* rados = static_cast<rgw::sal::RadosStore* >(store)->getRados();
 
     if ((*rados).set_use_cache(use_cache)
@@ -65,19 +65,9 @@ rgw::sal::Store* StoreManager::init_storage_provider(const DoutPrefixProvider* d
                 .initialize(cct, dpp) < 0) {
       delete store; store = nullptr;
     }
-      if(config_tracer)   
-      {
-       rgw::sal::Store* trace = newTracer(dpp, store); //forcing tracer to activate for testing - Dan P
-
-
-        ldpp_dout(dpp, 0) << "Post TracerDriver Setup" << dendl;
-        return trace;
-      }
-
-    return store;
-
   }
   else if (svc.compare("d3n") == 0) {
+    delete store;
     rgw::sal::RadosStore *store = new rgw::sal::RadosStore();
     RGWRados* rados = new D3nRGWDataCache<RGWRados>;
     store->setRados(rados);
@@ -93,16 +83,10 @@ rgw::sal::Store* StoreManager::init_storage_provider(const DoutPrefixProvider* d
                 .initialize(cct, dpp) < 0) {
       delete store; store = nullptr;
     }
-      /*
-        rgw::sal::Store* trace = newTracer(dpp, store); //forcing tracer to activate for testing - Dan P
-        store = trace;
-        */
-    return store;
   }
-
-  if (svc.compare("dbstore") == 0) {
+  else if (svc.compare("dbstore") == 0) {
 #ifdef WITH_RADOSGW_DBSTORE
-    rgw::sal::Store* store = newDBStore(cct);
+    store = newDBStore(cct);
 
     if ((*(rgw::sal::DBStore*)store).set_run_lc_thread(use_lc_thread)
                                     .initialize(cct, dpp) < 0) {
@@ -122,15 +106,15 @@ rgw::sal::Store* StoreManager::init_storage_provider(const DoutPrefixProvider* d
     if (r < 0) {
       ldpp_dout(dpp, 0) << "ERROR: failed inserting testid user in dbstore error r=" << r << dendl;
     }
-      /*
-        rgw::sal::Store* trace = newTracer(dpp, store); //forcing tracer to activate for testing - Dan P
-        store = trace;
-      */
-    return store;
 #endif
   }
+        #ifdef WITH_RADOSGW_TRACER
+        rgw::sal::Store* trace = newTracer(dpp, store); //forcing tracer to activate for testing - Daniel P
+        ldpp_dout(dpp, 0) << "Post TracerDriver Setup" << dendl;
+        return trace;
+        #endif
 
-  return nullptr;
+  return store;
 }
 
 rgw::sal::Store* StoreManager::init_raw_storage_provider(const DoutPrefixProvider* dpp, CephContext* cct, const std::string svc)

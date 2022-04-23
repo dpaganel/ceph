@@ -352,20 +352,17 @@ RGWAccessKeyPool::RGWAccessKeyPool(RGWUser* usr)
 
 int RGWAccessKeyPool::init(RGWUserAdminOpState& op_state)
 {
-  dout(0) << "KEY POOL init" << dendl;
   if (!op_state.is_initialized()) {
     keys_allowed = false;
     return -EINVAL;
   }
 
-  dout(0) << "KEY POOL init 1" << dendl;
   const rgw_user& uid = op_state.get_user_id();
   if (uid.compare(RGW_USER_ANON_ID) == 0) {
     keys_allowed = false;
     return -EACCES;
   }
 
-  dout(0) << "KEY POOL init 2" << dendl;
   swift_keys = op_state.get_swift_keys();
   access_keys = op_state.get_access_keys();
 
@@ -1416,14 +1413,11 @@ RGWUser::RGWUser() : caps(this), keys(this), subusers(this)
 int RGWUser::init(const DoutPrefixProvider *dpp, rgw::sal::Store* storage,
 		  RGWUserAdminOpState& op_state, optional_yield y)
 {
-  ldpp_dout(dpp, 0) << "init error diagnostic .5" << dendl;
   ldpp_dout(dpp, 0) << op_state.get_user_id() << dendl;
   init_default();
   int ret = init_storage(storage);
   if (ret < 0)
     return ret;
-
-  ldpp_dout(dpp, 0) << "init error diagnostic" << dendl;
 
   ret = init(dpp, op_state, y);
   if (ret < 0)
@@ -1461,7 +1455,6 @@ int RGWUser::init_storage(rgw::sal::Store* storage)
 
 int RGWUser::init(const DoutPrefixProvider *dpp, RGWUserAdminOpState& op_state, optional_yield y)
 {
-  ldpp_dout(dpp, 0) << "init error diagnostic 2" << dendl;
   bool found = false;
   std::string swift_user;
   user_id = op_state.get_user_id();
@@ -1477,11 +1470,9 @@ int RGWUser::init(const DoutPrefixProvider *dpp, RGWUserAdminOpState& op_state, 
     swift_user = op_state.get_access_key();
     access_key.clear();
   }
-  ldpp_dout(dpp, 0) << "init error diagnostic 3" << dendl;
   std::unique_ptr<rgw::sal::User> user;
 
   clear_populated();
-  ldpp_dout(dpp, 0) << "init error diagnostic 4" << dendl;
   if (user_id.empty() && !subuser.empty()) {
     size_t pos = subuser.find(':');
     if (pos != string::npos) {
@@ -1489,30 +1480,25 @@ int RGWUser::init(const DoutPrefixProvider *dpp, RGWUserAdminOpState& op_state, 
       op_state.set_user_id(user_id);
     }
   }
-  ldpp_dout(dpp, 0) << "init error diagnostic 5" << dendl;
   if (!user_id.empty() && (user_id.compare(RGW_USER_ANON_ID) != 0)) {
     user = store->get_user(user_id);
     found = (user->load_user(dpp, y) >= 0);
     op_state.found_by_uid = found;
   }
-  ldpp_dout(dpp, 0) << "init error diagnostic 6" << dendl;
   if (store->ctx()->_conf.get_val<bool>("rgw_user_unique_email")) {
     if (!user_email.empty() && !found) {
       found = (store->get_user_by_email(dpp, user_email, y, &user) >= 0);
       op_state.found_by_email = found;
     }
   }
-  ldpp_dout(dpp, 0) << "init error diagnostic 7" << dendl;
   if (!swift_user.empty() && !found) {
     found = (store->get_user_by_swift(dpp, swift_user, y, &user) >= 0);
     op_state.found_by_key = found;
   }
-  ldpp_dout(dpp, 0) << "init error diagnostic 8" << dendl;
   if (!access_key.empty() && !found) {
     found = (store->get_user_by_access_key(dpp, access_key, y, &user) >= 0);
     op_state.found_by_key = found;
   }
-  ldpp_dout(dpp, 0) << "init error diagnostic 9" << dendl;
   op_state.set_existing_user(found);
   if (found) {
     dout(0) << "set_existing_user" << dendl;
@@ -1523,41 +1509,33 @@ int RGWUser::init(const DoutPrefixProvider *dpp, RGWUserAdminOpState& op_state, 
     old_info = user->get_info();
     set_populated();
   }
-  ldpp_dout(dpp, 0) << "init error diagnostic 10" << dendl;
   if (user_id.empty()) {
     user_id = user->get_id();
   }
   op_state.set_initialized();
-  ldpp_dout(dpp, 0) << "init error diagnostic 11" << dendl;
   // this may have been called by a helper object
-  ldpp_dout(dpp, 0) << "init members time" << dendl;
   int ret = init_members(op_state);
   if (ret < 0)
   {
-    ldpp_dout(dpp, 0) << "init_members return and fail" << dendl;
     return ret;    
   }
 
-  ldpp_dout(dpp, 0) << "0 return" << dendl;
   return 0;
 }
 
 int RGWUser::init_members(RGWUserAdminOpState& op_state)
 {
   int ret = 0;
-  dout(0) << "init members 0" << dendl;
   ret = keys.init(op_state);
   if (ret < 0)
     return ret;
-  dout(0) << "init members 1" << dendl;
   ret = subusers.init(op_state);
   if (ret < 0)
     return ret;
-  dout(0) << "init members 2" << dendl;
   ret = caps.init(op_state);
   if (ret < 0)
     return ret;
-  dout(0) << "init members 3" << dendl;
+    
   return 0;
 }
 

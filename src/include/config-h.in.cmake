@@ -154,6 +154,9 @@
 /* define if radosgw enabled */
 #cmakedefine WITH_RADOSGW
 
+/*define if tracer driver enabled */
+#cmakedefine WITH_RADOSGW_TRACER 1
+
 /* define if radosgw has openssl support */
 #cmakedefine WITH_CURL_OPENSSL
 
