@@ -39,7 +39,11 @@ class TestVolume(object):
         assert error.value.code == 0
         log = caplog.records[-1]
         assert log.message == 'ignoring inability to load ceph.conf'
+<<<<<<< HEAD
         assert log.levelname == 'WARNING'
+=======
+        assert log.levelname == 'ERROR'
+>>>>>>> 0f5b3df3063 (A more careful addition of deleted files.)
 
     def test_logs_current_command(self, caplog):
         with pytest.raises(SystemExit) as error:
@@ -50,6 +54,7 @@ class TestVolume(object):
         assert log.message == 'Running command: ceph-volume --cluster barnacle lvm --help'
         assert log.levelname == 'INFO'
 
+<<<<<<< HEAD
     def test_logs_set_level_warning(self, caplog):
         with pytest.raises(SystemExit) as error:
             main.Volume(argv=['ceph-volume', '--log-level', 'warning', '--cluster', 'barnacle', 'lvm', '--help'])
@@ -59,6 +64,17 @@ class TestVolume(object):
         # only log levels of 'WARNING'
         for log in caplog.records:
             assert log.levelname == 'WARNING'
+=======
+    def test_logs_set_level_error(self, caplog):
+        with pytest.raises(SystemExit) as error:
+            main.Volume(argv=['ceph-volume', '--log-level', 'error', '--cluster', 'barnacle', 'lvm', '--help'])
+        # make sure we aren't causing an actual error
+        assert error.value.code == 0
+        assert caplog.records
+        # only log levels of 'ERROR' or above should be captured
+        for log in caplog.records:
+            assert log.levelname in ['ERROR', 'CRITICAL']
+>>>>>>> 0f5b3df3063 (A more careful addition of deleted files.)
 
     def test_logs_incorrect_log_level(self, capsys):
         with pytest.raises(SystemExit) as error:

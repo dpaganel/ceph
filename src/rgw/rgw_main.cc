@@ -666,7 +666,6 @@ int radosgw_Main(int argc, const char **argv)
     /* ignore error */
   }
 
-
   std::unique_ptr<RGWRealmReloader> reloader;
   std::unique_ptr<RGWPeriodPusher> pusher;
   std::unique_ptr<RGWFrontendPauser> pauser;
@@ -677,8 +676,20 @@ int radosgw_Main(int argc, const char **argv)
     pauser = std::make_unique<RGWFrontendPauser>(fes, implicit_tenant_context, pusher.get());
     reloader = std::make_unique<RGWRealmReloader>(store, service_map_meta, pauser.get());
 
-    realm_watcher = std::make_unique<RGWRealmWatcher>(&dp, g_ceph_context,
-				  static_cast<rgw::sal::RadosStore*>(store)->svc()->zone->get_realm());
+    
+    int with_tracer = -1;
+    #ifdef WITH_RADOSGW_TRACER
+      rgw::sal::Store* rados_store = static_cast<rgw::sal::TracerDriver*>(store)->get_real_store();
+      realm_watcher = std::make_unique<RGWRealmWatcher>(&dp, g_ceph_context,
+				    static_cast<rgw::sal::RadosStore*>(rados_store)->svc()->zone->get_realm());
+      with_tracer = 0;      
+    #endif
+    if (with_tracer < -1)
+    {
+      realm_watcher = std::make_unique<RGWRealmWatcher>(&dp, g_ceph_context,
+				    static_cast<rgw::sal::RadosStore*>(store)->svc()->zone->get_realm());
+    }
+
     realm_watcher->add_watcher(RGWRealmNotify::Reload, *reloader);
     realm_watcher->add_watcher(RGWRealmNotify::ZonesNeedPeriod, *pusher.get());
   }
@@ -688,6 +699,8 @@ int radosgw_Main(int argc, const char **argv)
     cerr << "warning: unable to set dumpable flag: " << cpp_strerror(errno) << std::endl;
   }
 #endif
+
+  dout(1) << "error check: rgw_main.cc:703" << dendl;
 
   wait_shutdown();
 

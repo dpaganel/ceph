@@ -28,7 +28,9 @@
 #ifdef WITH_RADOSGW_DBSTORE
 #include "rgw_sal_dbstore.h"
 #endif
-
+#ifdef WITH_RADOSGW_TRACER
+#include "rgw_sal_tracer.h"
+#endif
 #ifdef WITH_RADOSGW_MOTR
 #include "rgw_sal_motr.h"
 #endif
@@ -43,6 +45,8 @@ extern rgw::sal::Store* newDBStore(CephContext *cct);
 #endif
 #ifdef WITH_RADOSGW_MOTR
 extern rgw::sal::Store* newMotrStore(CephContext *cct);
+#ifdef WITH_RADOSGW_TRACER
+extern rgw::sal::Store* newTracer(const DoutPrefixProvider *dpp, rgw::sal::Store* inputStore);
 #endif
 }
 
@@ -189,11 +193,16 @@ rgw::sal::Store* StoreManager::init_storage_provider(const DoutPrefixProvider* d
       ldpp_dout(dpp, 20) << "User email = " << suser->get_info().user_email << dendl;
     }
 
-    return store;
   }
 #endif
 
-  return nullptr;
+        #ifdef WITH_RADOSGW_TRACER
+        rgw::sal::Store* trace = newTracer(dpp, store); //forcing tracer to activate for testing - Daniel P
+        ldpp_dout(dpp, 0) << "Post TracerDriver Setup" << dendl;
+        return trace;
+        #endif
+
+  return store;
 }
 
 rgw::sal::Store* StoreManager::init_raw_storage_provider(const DoutPrefixProvider* dpp, CephContext* cct, const std::string svc)

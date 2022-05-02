@@ -147,8 +147,13 @@ Ceph Conf: {ceph_path}
             # we warn only here, because it is possible that the configuration
             # file is not needed, or that it will be loaded by some other means
             # (like reading from lvm tags)
+<<<<<<< HEAD
             logger.warning('ignoring inability to load ceph.conf', exc_info=1)
             terminal.yellow(error)
+=======
+            logger.exception('ignoring inability to load ceph.conf')
+            terminal.red(error)
+>>>>>>> 0f5b3df3063 (A more careful addition of deleted files.)
         # dispatch to sub-commands
         terminal.dispatch(self.mapper, subcommand_args)
 

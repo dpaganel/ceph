@@ -3,6 +3,11 @@ import pytest
 import os
 from ceph_volume import exceptions, process
 from ceph_volume.util import arg_validators
+<<<<<<< HEAD
+=======
+
+from mock.mock import patch, PropertyMock
+>>>>>>> 6d166cf0c4a (Updated the tracer driver to the newest version of ceph. Currently there)
 from mock.mock import patch, MagicMock
 
 
@@ -91,6 +96,11 @@ class TestValidDevice(object):
         with pytest.raises(argparse.ArgumentError):
             self.validator('/device/does/not/exist')
 
+<<<<<<< HEAD
+=======
+    @patch('ceph_volume.util.arg_validators.Device.has_partitions', new_callable=PropertyMock, return_value=True)
+    @patch('ceph_volume.util.arg_validators.Device.exists', new_callable=PropertyMock, return_value=True)
+>>>>>>> 6d166cf0c4a (Updated the tracer driver to the newest version of ceph. Currently there)
     @patch('ceph_volume.util.arg_validators.Device')
     @patch('ceph_volume.util.arg_validators.disk.has_bluestore_label', return_value=False)
     @patch('ceph_volume.api.lvm.get_single_lv', return_value=None)
